@@ -3,119 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tabletop RPG Pro - Realtime</title>
+    <title>Tabletop RPG Pro - Dark UI / White Map</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDKs via CDN -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // CONFIGURAÇÃO OFICIAL DO USUÁRIO
         const firebaseConfig = {
             apiKey: "AIzaSyBVw6l8IfXlGTFKHHJLjsqAgyRwlxaVzvg",
             authDomain: "tabletop-teste.firebaseapp.com",
             projectId: "tabletop-teste",
             storageBucket: "tabletop-teste.firebasestorage.app",
             messagingSenderId: "562514175214",
-            appId: "1:562514175214:web:8c3be376fb82b0609d7fff",
-            measurementId: "G-DRVLNP7GBX"
+            appId: "1:562514175214:web:8c3be376fb82b0609d7fff"
         };
 
-        // Inicialização Global
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        // Identificador da sessão (AppId para o Firestore)
-        const vttAppId = "vtt-sessao-principal"; 
+        const appId = 'vtt-sessao-001';
 
-        // Exportando para o sistema usar
-        window.vtt = { 
-            db, auth, vttAppId, 
-            doc, setDoc, onSnapshot, collection, updateDoc, addDoc,
-            signInAnonymously
-        };
-
-        console.log("Firebase configurado com as chaves do usuário.");
+        window.vtt = { db, auth, appId, doc, setDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously };
     </script>
 
     <style>
-        :root { --bg-color: #020617; --accent: #4f46e5; }
-        body { background-color: var(--bg-color); color: #f8fafc; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; }
-        
-        #viewport { width: 100vw; height: 100vh; position: relative; overflow: hidden; cursor: grab; background: #000; }
-        #viewport:active { cursor: grabbing; }
-        
-        #map-container { position: absolute; transform-origin: 0 0; will-change: transform; }
-        #active-map { display: block; pointer-events: none; max-width: none; }
-        
-        #grid-overlay { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; z-index: 5; opacity: 0.15;
-            background-image: linear-gradient(to right, #6366f1 1px, transparent 1px), 
-                              linear-gradient(to bottom, #6366f1 1px, transparent 1px);
+        body { 
+            background-color: #020617; 
+            color: #f8fafc; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            overflow: hidden;
+            user-select: none;
         }
 
+        #viewport { 
+            width: 100vw; 
+            height: 100vh; 
+            position: relative; 
+            overflow: hidden; 
+            cursor: grab; 
+            background: #0f172a; 
+        }
+        #viewport:active { cursor: grabbing; }
+
+        #map-container { 
+            position: absolute; 
+            transform-origin: 0 0; 
+            background: white; 
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
+        }
+
+        #active-map { display: block; pointer-events: none; max-width: none; }
+
+        #grid-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; z-index: 5;
+            background-image: linear-gradient(to right, rgba(0,0,0,1) 1px, transparent 1px), 
+                              linear-gradient(to bottom, rgba(0,0,0,1) 1px, transparent 1px);
+        }
+
+        #tokens-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        
         .token { 
-            position: absolute; border-radius: 50%; border: 2px solid white; 
-            z-index: 20; background-size: cover; background-position: center;
-            box-shadow: 0 0 10px rgba(0,0,0,0.7); cursor: move;
-            transition: width 0.2s, height 0.2s;
+            pointer-events: auto; 
+            background-size: cover; 
+            background-position: center; 
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            cursor: move;
+            transition: left 0.1s ease-out, top 0.1s ease-out; /* Suaviza o encaixe no grid */
         }
 
         .sidebar { 
-            position: fixed; left: 20px; top: 20px; bottom: 20px; width: 240px;
-            background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-            z-index: 100; display: flex; flex-direction: column; padding: 15px;
+            position: fixed; left: 20px; top: 20px; bottom: 20px; width: 280px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+            z-index: 100; display: flex; flex-direction: column; padding: 24px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
 
-        .mestre-controls { display: none; }
-        body.is-mestre .mestre-controls { display: block; }
+        .mestre-only { display: none; }
+        body.is-mestre .mestre-only { display: block; }
+
+        .dice-btn {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #94a3b8;
+            transition: all 0.2s;
+        }
+        .dice-btn:hover { background: #6366f1; color: white; transform: translateY(-2px); }
+
+        input[type="range"] { accent-color: #6366f1; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <!-- Modal de Entrada -->
-    <div id="setup-modal" class="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4 text-center">
-        <div class="bg-slate-900 border border-slate-700 p-8 rounded-2xl max-w-sm w-full">
-            <h1 class="text-2xl font-bold mb-2">Tabletop Realtime</h1>
-            <p class="text-slate-400 text-sm mb-8">Conecte-se à sua mesa de RPG</p>
-            <div class="grid gap-3">
-                <button onclick="startVTT('mestre')" class="bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl font-bold transition">Entrar como Mestre</button>
-                <button onclick="startVTT('jogador')" class="bg-slate-700 hover:bg-slate-600 py-3 rounded-xl font-bold transition">Entrar como Jogador</button>
+    <div id="setup-modal" class="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+            <h1 class="text-3xl font-black text-white mb-8 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
+            <div class="space-y-3">
+                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all transform active:scale-95 shadow-lg shadow-indigo-500/20">Entrar como Mestre</button>
+                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all transform active:scale-95">Entrar como Jogador</button>
             </div>
-            <p id="auth-log" class="mt-6 text-[10px] font-mono text-slate-500 italic">Aguardando comando...</p>
+            <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest"></p>
         </div>
     </div>
 
     <div class="sidebar">
-        <div class="flex items-center justify-between mb-6">
-            <span class="text-xs font-black tracking-tighter text-indigo-400 uppercase">VTT Online</span>
-            <div id="sync-dot" class="w-2 h-2 rounded-full bg-red-500"></div>
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Dashboard</h2>
+                <p class="text-[9px] text-slate-500 font-mono">Sincronizado</p>
+            </div>
+            <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
         </div>
 
-        <div class="space-y-4 overflow-y-auto">
-            <div class="mestre-controls space-y-3">
-                <p class="text-[10px] text-slate-500 font-bold uppercase">Painel do Mestre</p>
-                <button onclick="document.getElementById('f-map').click()" class="w-full bg-slate-800 text-[11px] p-2 rounded border border-slate-700">Subir Mapa</button>
-                <button onclick="document.getElementById('f-token').click()" class="w-full bg-indigo-600 text-[11px] p-2 rounded font-bold">Add Token</button>
-                <div class="p-2 bg-black/20 rounded border border-slate-800">
-                    <label class="text-[9px] text-slate-400">Grid: <span id="grid-txt">60</span>px</label>
-                    <input type="range" id="grid-range" min="40" max="120" value="60" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer">
+        <div class="flex-1 overflow-y-auto space-y-8 pr-2">
+            <section class="mestre-only space-y-5">
+                <div class="space-y-2">
+                    <button onclick="document.getElementById('f-map').click()" class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-3 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">Alterar Mapa</button>
+                    <button onclick="document.getElementById('f-token').click()" class="w-full bg-slate-800/50 border border-slate-700 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all">Novo Token</button>
+                    <button onclick="syncCamera()" class="w-full bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 py-3 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">Sincronizar Visão</button>
                 </div>
-            </div>
 
-            <div class="space-y-2">
-                <p class="text-[10px] text-slate-500 font-bold uppercase">Dados</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="roll(20)" class="bg-slate-800 py-2 rounded text-xs">d20</button>
-                    <button onclick="roll(6)" class="bg-slate-800 py-2 rounded text-xs">d6</button>
+                <div class="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-4">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">Grid: <span id="grid-txt" class="text-indigo-400">60px</span></div>
+                        <input type="range" id="grid-range" min="30" max="150" value="60" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">Opacidade: <span id="opacity-txt" class="text-indigo-400">20%</span></div>
+                        <input type="range" id="opacity-range" min="0" max="100" value="20" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
                 </div>
-                <div id="dice-history" class="text-[10px] font-mono text-indigo-300 max-h-32 overflow-y-auto space-y-1"></div>
-            </div>
+            </section>
+
+            <section class="space-y-4">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rolagem</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="roll(20)" class="dice-btn py-3 rounded-xl text-xs font-black">d20</button>
+                    <button onclick="roll(12)" class="dice-btn py-3 rounded-xl text-xs font-black">d12</button>
+                    <button onclick="roll(6)" class="dice-btn py-3 rounded-xl text-xs font-black">d6</button>
+                </div>
+                <div id="dice-history" class="bg-black/20 rounded-2xl p-4 h-40 overflow-y-auto space-y-2 border border-white/5 flex flex-col-reverse"></div>
+            </section>
         </div>
 
         <input type="file" id="f-map" class="hidden" accept="image/*">
@@ -124,91 +162,103 @@
 
     <div id="viewport">
         <div id="map-container">
-            <img id="active-map" src="">
+            <img id="active-map" src="" alt="">
             <div id="grid-overlay"></div>
             <div id="tokens-layer"></div>
         </div>
     </div>
 
     <script type="module">
-        const state = {
-            role: 'jogador',
-            zoom: 1,
-            pan: { x: 0, y: 0 },
-            gridSize: 60
+        const state = { 
+            role: 'jogador', 
+            zoom: 1, 
+            pan: { x: 100, y: 100 }, 
+            gridSize: 60, 
+            opacity: 0.2
         };
 
         const viewport = document.getElementById('viewport');
         const container = document.getElementById('map-container');
         const mapImg = document.getElementById('active-map');
-        const statusLog = document.getElementById('auth-log');
+        const gridOverlay = document.getElementById('grid-overlay');
 
         window.startVTT = async (role) => {
-            const { auth, db, vttAppId, signInAnonymously } = window.vtt;
+            const { auth, signInAnonymously } = window.vtt;
             state.role = role;
             if(role === 'mestre') document.body.classList.add('is-mestre');
-
-            statusLog.innerText = "Autenticando no Firebase...";
             
             try {
                 await signInAnonymously(auth);
-                statusLog.innerText = "Conectado! Sincronizando dados...";
-                
                 document.getElementById('setup-modal').style.display = 'none';
-                document.getElementById('sync-dot').classList.replace('bg-red-500', 'bg-green-500');
-                
+                const dot = document.getElementById('sync-dot');
+                dot.classList.replace('bg-red-500', 'bg-green-500');
                 initSync();
-            } catch (err) {
-                console.error(err);
-                statusLog.innerHTML = `<span class="text-red-500">Erro: ${err.code}</span><br>Verifique se o login anônimo está ativo no console.`;
-            }
+            } catch (err) { console.error(err); }
         };
 
         function initSync() {
-            const { db, vttAppId, onSnapshot, doc, collection } = window.vtt;
-
-            // Sync Mapa e Grid
-            onSnapshot(doc(db, 'artifacts', vttAppId, 'public', 'data', 'world'), (snap) => {
+            const { db, appId, onSnapshot, doc, collection } = window.vtt;
+            
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
                     state.gridSize = data.grid || 60;
-                    if (data.mapUrl && mapImg.src !== data.mapUrl) mapImg.src = data.mapUrl;
+                    state.opacity = data.opacity !== undefined ? data.opacity : 0.2;
+                    
+                    if (state.role === 'jogador' && data.camera) {
+                        state.zoom = data.camera.zoom;
+                        state.pan = { ...data.camera.pan };
+                    }
+
+                    if (data.mapUrl && mapImg.src !== data.mapUrl) {
+                        mapImg.src = data.mapUrl;
+                        mapImg.onload = () => {
+                            container.style.width = mapImg.width + "px";
+                            container.style.height = mapImg.height + "px";
+                            render();
+                        };
+                    }
                     render();
                 }
             });
 
-            // Sync Tokens
-            onSnapshot(collection(db, 'artifacts', vttAppId, 'public', 'data', 'tokens'), (snap) => {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), (snap) => {
                 snap.docChanges().forEach(change => {
-                    const id = change.doc.id;
-                    const data = change.doc.data();
-                    if (change.type === "removed") {
-                        document.getElementById(id)?.remove();
-                    } else {
-                        updateTokenDOM(id, data);
-                    }
+                    if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
+                    else updateTokenDOM(change.doc.id, change.doc.data());
                 });
             });
+        }
+
+        // Função utilitária para calcular o alinhamento perfeito no grid
+        function snapToGrid(val) {
+            return Math.floor(val / state.gridSize) * state.gridSize;
         }
 
         function updateTokenDOM(id, data) {
             let el = document.getElementById(id);
             if (!el) {
                 el = document.createElement('div');
-                el.id = id;
-                el.className = 'token';
+                el.id = id; el.className = 'token absolute z-20';
                 el.style.backgroundImage = `url(${data.url})`;
-                attachDrag(el, id);
+                attachTokenDrag(el, id);
                 document.getElementById('tokens-layer').appendChild(el);
             }
-            el.style.width = el.style.height = `${state.gridSize * 0.9}px`;
-            el.style.left = `${data.x}px`;
-            el.style.top = `${data.y}px`;
+            // Tamanho levemente menor que o grid para mostrar a borda branca
+            const size = state.gridSize - 4; 
+            el.style.width = el.style.height = `${size}px`;
+            
+            // Força a posição sincronizada a estar alinhada
+            el.style.left = `${snapToGrid(data.x) + 2}px`; 
+            el.style.top = `${snapToGrid(data.y) + 2}px`;
         }
 
-        function attachDrag(el, id) {
+        function attachTokenDrag(el, id) {
             el.onmousedown = (e) => {
+                if (state.role !== 'mestre') return;
                 e.stopPropagation();
+                el.style.transition = 'none'; // Desativa transição durante o drag
+                
                 const startX = e.clientX, startY = e.clientY;
                 const initialX = el.offsetLeft, initialY = el.offsetTop;
 
@@ -220,57 +270,90 @@
                 const stop = async () => {
                     window.removeEventListener('mousemove', move);
                     window.removeEventListener('mouseup', stop);
-                    
-                    const snapX = Math.round(el.offsetLeft / state.gridSize) * state.gridSize + (state.gridSize * 0.05);
-                    const snapY = Math.round(el.offsetTop / state.gridSize) * state.gridSize + (state.gridSize * 0.05);
-                    
-                    const { db, vttAppId, updateDoc, doc } = window.vtt;
-                    await updateDoc(doc(db, 'artifacts', vttAppId, 'public', 'data', 'tokens', id), { x: snapX, y: snapY });
+                    el.style.transition = 'left 0.1s ease-out, top 0.1s ease-out';
+
+                    // Cálculo final de SNAP
+                    const finalX = snapToGrid(el.offsetLeft);
+                    const finalY = snapToGrid(el.offsetTop);
+
+                    const { db, appId, updateDoc, doc } = window.vtt;
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { 
+                        x: finalX, 
+                        y: finalY 
+                    });
                 };
                 window.addEventListener('mousemove', move);
                 window.addEventListener('mouseup', stop);
             };
         }
 
+        window.syncCamera = async () => {
+            const { db, appId, updateDoc, doc } = window.vtt;
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
+                camera: { zoom: state.zoom, pan: state.pan } 
+            });
+        };
+
         function render() {
             container.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.zoom})`;
-            document.getElementById('grid-overlay').style.backgroundSize = `${state.gridSize}px ${state.gridSize}px`;
-            document.getElementById('grid-txt').innerText = state.gridSize;
+            gridOverlay.style.backgroundSize = `${state.gridSize}px ${state.gridSize}px`;
+            gridOverlay.style.opacity = state.opacity;
+            
+            document.getElementById('grid-txt').innerText = state.gridSize + "px";
+            document.getElementById('opacity-txt').innerText = Math.round(state.opacity * 100) + "%";
+            document.getElementById('opacity-range').value = state.opacity * 100;
+            document.getElementById('grid-range').value = state.gridSize;
+
+            // Atualiza tamanho dos tokens existentes se o grid mudar
+            document.querySelectorAll('.token').forEach(t => {
+                const size = state.gridSize - 4;
+                t.style.width = t.style.height = `${size}px`;
+            });
         }
 
-        // Uploads (Mestre)
+        document.getElementById('grid-range').oninput = (e) => {
+            const { db, appId, updateDoc, doc } = window.vtt;
+            updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { grid: parseInt(e.target.value) });
+        };
+
+        document.getElementById('opacity-range').oninput = (e) => {
+            const { db, appId, updateDoc, doc } = window.vtt;
+            updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { opacity: parseFloat(e.target.value) / 100 });
+        };
+
         document.getElementById('f-map').onchange = (e) => {
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                const { db, vttAppId, setDoc, doc } = window.vtt;
-                setDoc(doc(db, 'artifacts', vttAppId, 'public', 'data', 'world'), { mapUrl: ev.target.result, grid: state.gridSize });
+            reader.onload = async (ev) => {
+                const { db, appId, setDoc, doc } = window.vtt;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
+                    mapUrl: ev.target.result, grid: state.gridSize, opacity: state.opacity 
+                });
             };
             reader.readAsDataURL(e.target.files[0]);
         };
 
         document.getElementById('f-token').onchange = (e) => {
             const reader = new FileReader();
-            reader.onload = (ev) => {
-                const { db, vttAppId, addDoc, collection } = window.vtt;
-                addDoc(collection(db, 'artifacts', vttAppId, 'public', 'data', 'tokens'), { url: ev.target.result, x: 50, y: 50 });
+            reader.onload = async (ev) => {
+                const { db, appId, addDoc, collection } = window.vtt;
+                // Tokens novos já nascem alinhados no grid
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), { 
+                    url: ev.target.result, 
+                    x: snapToGrid(100), 
+                    y: snapToGrid(100) 
+                });
             };
             reader.readAsDataURL(e.target.files[0]);
         };
 
-        document.getElementById('grid-range').oninput = (e) => {
-            const val = parseInt(e.target.value);
-            const { db, vttAppId, updateDoc, doc } = window.vtt;
-            updateDoc(doc(db, 'artifacts', vttAppId, 'public', 'data', 'world'), { grid: val });
-        };
-
-        // Navegação
         viewport.onmousedown = (e) => {
-            if(e.button !== 0) return;
-            const startX = e.clientX - state.pan.x, startY = e.clientY - state.pan.y;
-            const move = (ev) => {
-                state.pan.x = ev.clientX - startX;
-                state.pan.y = ev.clientY - startY;
-                render();
+            if(e.button !== 0 || (e.target !== viewport && e.target !== mapImg)) return;
+            const startX = e.clientX - state.pan.x;
+            const startY = e.clientY - state.pan.y;
+            const move = (ev) => { 
+                state.pan.x = ev.clientX - startX; 
+                state.pan.y = ev.clientY - startY; 
+                render(); 
             };
             window.addEventListener('mousemove', move);
             window.addEventListener('mouseup', () => window.removeEventListener('mousemove', move), {once:true});
@@ -278,17 +361,18 @@
 
         viewport.onwheel = (e) => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            state.zoom = Math.min(Math.max(state.zoom + delta, 0.1), 3);
+            const delta = e.deltaY > 0 ? -0.05 : 0.05;
+            state.zoom = Math.min(Math.max(state.zoom + delta, 0.1), 4);
             render();
         };
 
         window.roll = (s) => {
             const r = Math.floor(Math.random() * s) + 1;
-            const log = document.getElementById('dice-history');
-            const div = document.createElement('div');
-            div.innerText = `> d${s}: ${r}`;
-            log.prepend(div);
+            const history = document.getElementById('dice-history');
+            const entry = document.createElement('div');
+            entry.className = "flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/5";
+            entry.innerHTML = `<span class="text-[10px] text-slate-500 font-bold">d${s}</span><span class="text-xs font-black text-indigo-400">${r}</span>`;
+            history.appendChild(entry);
         };
 
         render();
