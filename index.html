@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tabletop RPG Pro</title>
+    <title>Tabletop RPG Pro - Dark UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-
+    
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBVw6l8IfXlGTFKHHJLjsqAgyRwlxaVzvg",
@@ -26,1396 +26,143 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         const appId = 'vtt-sessao-001';
-        window.vtt = { db, auth, appId, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously };
+
+        window.vtt = { db, auth, appId, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously, serverTimestamp };
     </script>
 
     <style>
-        * { box-sizing: border-box; }
-        body {
-            background-color: #020617;
-            color: #f8fafc;
-            font-family: 'Inter', sans-serif;
-            margin: 0;
+        body { 
+            background-color: #020617; 
+            color: #f8fafc; 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
             overflow: hidden;
             user-select: none;
         }
 
-        /* ── Viewport ── */
-        #viewport {
-            width: 100vw; height: 100vh;
-            position: relative; overflow: hidden;
-            cursor: grab; background: #0f172a;
+        #viewport { 
+            width: 100vw; 
+            height: 100vh; 
+            position: relative; 
+            overflow: hidden; 
+            cursor: grab; 
+            background: #0f172a; 
         }
         #viewport:active { cursor: grabbing; }
-        #viewport.fog-paint { cursor: crosshair !important; }
-        #viewport.fog-erase { cursor: cell !important; }
 
-        /* ── Map Container ── */
-        #map-container {
-            position: absolute;
-            transform-origin: 0 0;
-            background: white;
-            box-shadow: 0 0 80px rgba(0,0,0,0.6);
+        #map-container { 
+            position: absolute; 
+            transform-origin: 0 0; 
+            background: white; 
+            box-shadow: 0 0 100px rgba(0,0,0,0.5);
+            min-width: 100px;
+            min-height: 100px;
         }
 
-        #active-map {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: fill; pointer-events: none;
-            display: none;
-        }
+        #active-map { display: block; pointer-events: none; max-width: none; min-width: 50px; min-height: 50px; }
 
-        #grid-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        #grid-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             pointer-events: none; z-index: 5;
-            background-image:
-                linear-gradient(to right, rgba(0,0,0,0.2) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(0,0,0,0.2) 1px, transparent 1px);
+            background-image: linear-gradient(to right, rgba(0,0,0,0.3) 1px, transparent 1px), 
+                              linear-gradient(to bottom, rgba(0,0,0,0.3) 1px, transparent 1px);
         }
 
-        #tokens-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 10; pointer-events: none;
-        }
-
-        #fog-canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 15; pointer-events: none;
-        }
-
-        #ruler-canvas {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 20; pointer-events: none;
-        }
-
-        /* ── Ping ── */
-        .ping-dot {
-            position: absolute; z-index: 25;
-            width: 30px; height: 30px; border-radius: 50%;
-            border: 3px solid #f59e0b;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            animation: ping-pulse 2.5s ease-out forwards;
-        }
-        @keyframes ping-pulse {
-            0%   { transform: translate(-50%,-50%) scale(0.5); opacity: 1; }
-            70%  { transform: translate(-50%,-50%) scale(2.5); opacity: 0.3; }
-            100% { transform: translate(-50%,-50%) scale(3); opacity: 0; }
-        }
-
-        /* ── Tokens ── */
-        .token {
-            position: relative;
-            pointer-events: auto;
-            background-size: cover;
-            background-position: center;
+        #tokens-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        
+        .token { 
+            pointer-events: auto; 
+            background-size: cover; 
+            background-position: center; 
             border-radius: 50%;
-            border: 3px solid #fff;
+            border: 2px solid #fff;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             cursor: move;
-        }
-        .token:hover { outline: 3px solid rgba(99,102,241,0.7); }
-
-        .token-wrapper {
-            position: absolute; z-index: 11;
-            pointer-events: none;
+            transition: left 0.1s ease-out, top 0.1s ease-out;
         }
 
-        .token-hp-bar {
-            position: absolute;
-            bottom: -9px; left: 0;
-            width: 100%; height: 6px;
-            background: #1e293b; border-radius: 3px; overflow: hidden;
-        }
-        .token-hp-fill {
-            height: 100%; background: #22c55e; border-radius: 3px;
-            transition: width 0.3s, background 0.3s;
-        }
-        .token-name {
-            position: absolute;
-            bottom: -24px; left: 50%;
-            transform: translateX(-50%);
-            font-size: 9px; font-weight: 700; color: #1e293b;
-            background: rgba(255,255,255,0.9);
-            padding: 1px 6px; border-radius: 4px;
-            white-space: nowrap; max-width: 140px;
-            overflow: hidden; text-overflow: ellipsis;
-        }
-
-        /* ── Badge de controle do jogador ── */
-        .token-player-badge {
-            position: absolute;
-            top: -5px; right: -5px;
-            width: 14px; height: 14px;
-            background: #22c55e;
-            border: 2px solid #0f172a;
-            border-radius: 50%;
-            display: none;
-            z-index: 2;
-            box-shadow: 0 0 6px rgba(34,197,94,0.7);
-        }
-        .token-player-badge.visible { display: block; }
-
-        /* Cursor move para jogadores em tokens liberados */
-        .token.player-can-move { cursor: move; }
-        .token.locked { cursor: default; }
-
-        /* ── Sidebar ── */
-        .sidebar {
+        .sidebar { 
             position: fixed; left: 20px; top: 20px; bottom: 20px; width: 280px;
-            background: rgba(15,23,42,0.97); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.08); border-radius: 20px;
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
             z-index: 100; display: flex; flex-direction: column; padding: 20px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
+
         .mestre-only { display: none; }
         body.is-mestre .mestre-only { display: block; }
 
-        /* ── Tool Buttons ── */
-        .tool-bar { display: flex; gap: 6px; }
-        .tool-btn {
-            flex: 1; padding: 7px 4px; border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.08);
-            background: rgba(30,41,59,0.6);
-            color: #64748b; font-size: 10px; font-weight: 700;
-            cursor: pointer; text-align: center; transition: all 0.2s;
-        }
-        .tool-btn:hover { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-        .tool-btn.active { background: #4f46e5; color: white; border-color: #6366f1; }
-
-        /* ── Collapsible Map Size ── */
-        .collapse-btn {
-            width: 100%; display: flex; align-items: center; justify-content: between;
-            background: rgba(30,41,59,0.5); border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 10px; padding: 7px 10px; cursor: pointer;
-            font-size: 9px; font-weight: 700; color: #64748b; text-align: left;
+        .dice-btn {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #94a3b8;
             transition: all 0.2s;
         }
-        .collapse-btn:hover { background: rgba(99,102,241,0.1); color: #a5b4fc; border-color: rgba(99,102,241,0.2); }
-        .collapse-panel {
-            display: none;
-            background: rgba(0,0,0,0.2);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 10px; padding: 10px;
-            margin-top: 4px;
-        }
-        .collapse-panel.open { display: block; }
-
-        .map-size-btn {
-            background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.1);
-            color: #94a3b8; transition: all 0.2s;
-            width: 26px; height: 26px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; font-weight: bold; cursor: pointer; flex-shrink: 0;
-        }
-        .map-size-btn:hover { background: #6366f1; color: white; }
-        .size-row {
-            display: flex; align-items: center; gap: 6px;
-            border-radius: 8px; padding: 3px 2px; transition: background 0.15s;
-        }
-        .size-row:hover { background: rgba(99,102,241,0.07); }
-
-        /* ── Initiative ── */
-        .init-entry {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 8px; border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.05);
-            background: rgba(30,41,59,0.4); transition: all 0.2s;
-        }
-        .init-entry.current { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); }
-        .init-roll {
-            width: 28px; height: 28px; border-radius: 8px;
-            background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3);
-            color: #a5b4fc; font-size: 11px; font-weight: 900;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .init-name { flex: 1; font-size: 10px; font-weight: 700; color: #cbd5e1; }
-        .init-del { color: #475569; cursor: pointer; font-size: 14px; padding: 2px; border-radius: 4px; transition: color 0.15s; }
-        .init-del:hover { color: #f87171; }
-
-        /* ── Dice ── */
-        .dice-btn {
-            background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.1);
-            color: #94a3b8; transition: all 0.2s;
-        }
         .dice-btn:hover { background: #6366f1; color: white; transform: translateY(-2px); }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            margin-bottom: 6px;
+        }
+        .user-badge.is-mestre-badge {
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
         input[type="range"] { accent-color: #6366f1; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-
-        /* ── Context Menu ── */
-        #ctx-menu {
-            position: fixed; z-index: 500;
-            background: rgba(15,23,42,0.98); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
-            padding: 8px; min-width: 190px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
-            display: none;
-        }
-        .ctx-item {
-            padding: 8px 12px; border-radius: 8px; cursor: pointer;
-            font-size: 11px; font-weight: 600; color: #cbd5e1;
-            display: flex; align-items: center; gap: 8px; transition: background 0.15s;
-        }
-        .ctx-item:hover { background: rgba(99,102,241,0.2); color: white; }
-        .ctx-item.danger:hover { background: rgba(239,68,68,0.2); color: #f87171; }
-        .ctx-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 4px 0; }
-
-        /* ── Modals ── */
-        .modal-overlay {
-            position: fixed; inset: 0; z-index: 400;
-            background: rgba(0,0,0,0.75); backdrop-filter: blur(5px);
-            display: none; align-items: center; justify-content: center;
-        }
-        .modal-overlay.open { display: flex; }
-        .modal-box {
-            background: #0f172a; border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 20px; padding: 24px; width: 300px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-        }
-        .modal-title {
-            font-size: 10px; font-weight: 700; color: #94a3b8;
-            text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;
-        }
-        .modal-input {
-            width: 100%; background: rgba(30,41,59,0.8);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
-            padding: 9px 12px; color: white; font-size: 13px; outline: none;
-            font-family: inherit;
-        }
-        .modal-input:focus { border-color: #6366f1; }
-        .modal-btns { display: flex; gap: 8px; margin-top: 16px; }
-        .btn-cancel {
-            flex: 1; padding: 9px; border-radius: 12px; font-size: 11px; font-weight: 700;
-            background: rgba(30,41,59,0.8); color: #64748b; cursor: pointer; border: none;
-            transition: background 0.2s;
-        }
-        .btn-cancel:hover { background: rgba(30,41,59,1); color: #94a3b8; }
-        .btn-save {
-            flex: 1; padding: 9px; border-radius: 12px; font-size: 11px; font-weight: 700;
-            background: #4f46e5; color: white; cursor: pointer; border: none;
-            transition: background 0.2s;
-        }
-        .btn-save:hover { background: #6366f1; }
-
-        /* ── Token Size Picker ── */
-        .size-picker-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .size-choice {
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
-            padding: 12px 8px; border-radius: 14px;
-            border: 2px solid rgba(255,255,255,0.08);
-            background: rgba(30,41,59,0.5);
-            cursor: pointer; transition: all 0.2s;
-        }
-        .size-choice:hover { border-color: #6366f1; background: rgba(99,102,241,0.15); }
-        .size-choice-preview {
-            background: rgba(99,102,241,0.3); border: 2px solid #6366f1;
-            border-radius: 50%;
-        }
-        .size-choice span { font-size: 10px; font-weight: 700; color: #94a3b8; }
-        .size-choice small { font-size: 8px; color: #475569; }
     </style>
 </head>
 <body>
 
-<!-- ══ SETUP MODAL ══ -->
-<div id="setup-modal" class="fixed inset-0 bg-black/90 z-[600] flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
-        <h1 class="text-3xl font-black text-white mb-2 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
-        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-8">Mesa Virtual de RPG</p>
-        <div class="space-y-3">
-            <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20">⚔️ Entrar como Mestre</button>
-            <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all active:scale-95">🎲 Entrar como Jogador</button>
+    <!-- Modal de Login -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+            <h1 class="text-3xl font-black text-white mb-8 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
+            <input type="text" id="user-name" placeholder="Seu Nome de Jogador" class="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <div class="space-y-3">
+                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all shadow-lg">Entrar como Mestre</button>
+                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all">Entrar como Jogador</button>
+            </div>
+            <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando...</p>
         </div>
-        <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando Escolha...</p>
     </div>
-</div>
 
-<!-- ══ TOKEN SIZE MODAL ══ -->
-<div id="token-size-modal" class="modal-overlay">
-    <div class="modal-box">
-        <p class="modal-title">🧙 Tamanho do Token</p>
-        <div class="size-picker-grid">
-            <div class="size-choice" onclick="selectTokenSize(1)">
-                <div class="size-choice-preview" style="width:36px;height:36px"></div>
-                <span>1 × 1</span>
-                <small>Padrão</small>
-            </div>
-            <div class="size-choice" onclick="selectTokenSize(2)">
-                <div class="size-choice-preview" style="width:52px;height:52px"></div>
-                <span>2 × 2</span>
-                <small>Grande</small>
-            </div>
-            <div class="size-choice" onclick="selectTokenSize(3)">
-                <div class="size-choice-preview" style="width:68px;height:68px"></div>
-                <span>3 × 3</span>
-                <small>Enorme</small>
-            </div>
-        </div>
-        <button class="btn-cancel w-full mt-4" onclick="closeTokenSizeModal()">Cancelar</button>
-    </div>
-</div>
-
-<!-- ══ HP MODAL ══ -->
-<div id="hp-modal" class="modal-overlay">
-    <div class="modal-box">
-        <p class="modal-title">❤️ Editar HP do Token</p>
-        <div class="space-y-3">
+    <!-- Sidebar Lateral -->
+    <div class="sidebar">
+        <div class="flex items-center justify-between mb-6">
             <div>
-                <label class="text-[9px] text-slate-500 block mb-1">HP Atual</label>
-                <input type="number" id="hp-current-input" class="modal-input" placeholder="ex: 25">
+                <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Mesa Virtual</h2>
+                <p class="text-[9px] text-slate-500 font-mono" id="session-id">ID: vtt-001</p>
             </div>
-            <div>
-                <label class="text-[9px] text-slate-500 block mb-1">HP Máximo</label>
-                <input type="number" id="hp-max-input" class="modal-input" placeholder="ex: 40">
-            </div>
+            <div id="sync-status" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
         </div>
-        <div class="modal-btns">
-            <button class="btn-cancel" id="hp-cancel">Cancelar</button>
-            <button class="btn-save" id="hp-save">Salvar</button>
-        </div>
-    </div>
-</div>
 
-<!-- ══ RENAME MODAL ══ -->
-<div id="rename-modal" class="modal-overlay">
-    <div class="modal-box">
-        <p class="modal-title">✏️ Renomear Token</p>
-        <input type="text" id="rename-input" class="modal-input" placeholder="Nome do personagem">
-        <div class="modal-btns">
-            <button class="btn-cancel" id="rename-cancel">Cancelar</button>
-            <button class="btn-save" id="rename-save">Salvar</button>
-        </div>
-    </div>
-</div>
-
-<!-- ══ CONTEXT MENU ══ -->
-<div id="ctx-menu">
-    <div class="ctx-item" id="ctx-rename">✏️ &nbsp;Renomear</div>
-    <div class="ctx-item" id="ctx-hp">❤️ &nbsp;Editar HP</div>
-    <!-- Itens exclusivos do Mestre -->
-    <div class="ctx-divider ctx-gm-only"></div>
-    <div class="ctx-item ctx-gm-only" id="ctx-player-ctrl">🎮 &nbsp;Liberar para Jogadores</div>
-    <div class="ctx-divider ctx-gm-only"></div>
-    <div class="ctx-item ctx-gm-only" id="ctx-color-w">⬜ &nbsp;Borda Branca</div>
-    <div class="ctx-item ctx-gm-only" id="ctx-color-r">🔴 &nbsp;Borda Vermelha</div>
-    <div class="ctx-item ctx-gm-only" id="ctx-color-g">🟢 &nbsp;Borda Verde</div>
-    <div class="ctx-item ctx-gm-only" id="ctx-color-b">🔵 &nbsp;Borda Azul</div>
-    <div class="ctx-item ctx-gm-only" id="ctx-color-y">🟡 &nbsp;Borda Amarela</div>
-    <div class="ctx-divider ctx-gm-only"></div>
-    <div class="ctx-item ctx-gm-only" id="ctx-init">⚡ &nbsp;Adicionar à Iniciativa</div>
-    <div class="ctx-divider ctx-gm-only"></div>
-    <div class="ctx-item danger ctx-gm-only" id="ctx-delete">🗑️ &nbsp;Deletar Token</div>
-</div>
-
-<!-- ══ SIDEBAR ══ -->
-<div class="sidebar">
-    <div class="flex items-center justify-between mb-5">
-        <div>
-            <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Tabletop Pro</h2>
-            <p id="role-label" class="text-[9px] text-slate-500 font-mono">Conectando...</p>
-        </div>
-        <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
-    </div>
-
-    <div class="flex-1 overflow-y-auto space-y-4 pr-1">
-
-        <!-- ─ FERRAMENTAS MESTRE ─ -->
-        <section class="mestre-only space-y-3">
-
-            <!-- Ferramentas de Modo -->
-            <div>
-                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Ferramenta</p>
-                <div class="tool-bar">
-                    <button class="tool-btn active" id="tool-move"      onclick="setMode('move')">🖐 Mover</button>
-                    <button class="tool-btn"         id="tool-fog-paint" onclick="setMode('fog-paint')">🌫️ Névoa</button>
-                    <button class="tool-btn"         id="tool-fog-erase" onclick="setMode('fog-erase')">👁️ Revelar</button>
+        <div class="flex-1 overflow-y-auto space-y-8 pr-2">
+            <!-- Tabela de Quem está Online -->
+            <section>
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Conectados no Momento</h3>
+                <div id="players-list" class="space-y-1">
+                    <!-- Gerado via JS -->
                 </div>
-                <div class="flex gap-2 mt-2">
-                    <button onclick="clearFog()" class="flex-1 text-[9px] font-bold py-1.5 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white transition-all">Limpar Névoa</button>
-                    <button onclick="fillFog()"  class="flex-1 text-[9px] font-bold py-1.5 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white transition-all">Cobrir Tudo</button>
+            </section>
+
+            <!-- Ações do Mestre -->
+            <section class="mestre-only space-y-5">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ferramentas</h3>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="document.getElementById('f-map').click()" class="bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-3 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">Trocar Mapa</button>
+                    <button onclick="document.getElementById('f-token').click()" class="bg-slate-800 border border-slate-700 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all">Adicionar Token</button>
+                    <button onclick="syncCamera()" class="bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 py-3 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">Sincronizar Visão</button>
                 </div>
-            </div>
 
-            <!-- Ações -->
-            <div class="space-y-2">
-                <button onclick="document.getElementById('f-map').click()" class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">🗺️ Alterar Mapa</button>
-                <button onclick="openTokenSizeModal()" class="w-full bg-slate-800/50 border border-slate-700 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all">🧙 Novo Token</button>
-                <button onclick="syncCamera()" class="w-full bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 py-2.5 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">📡 Sincronizar Visão</button>
-            </div>
-
-            <p class="text-[8px] text-slate-600 text-center">Ctrl+Clique = Ping &nbsp;|&nbsp; Shift+Arrastar = Régua</p>
-
-            <!-- Grid / Opacidade -->
-            <div class="bg-black/20 p-3 rounded-xl border border-white/5 space-y-3">
-                <div>
-                    <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase">Grid: <span id="grid-txt" class="text-indigo-400">60px</span></div>
-                    <input type="range" id="grid-range" min="30" max="150" value="60" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
-                </div>
-                <div>
-                    <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase">Opacidade Grid: <span id="opacity-txt" class="text-indigo-400">20%</span></div>
-                    <input type="range" id="opacity-range" min="0" max="100" value="20" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
-                </div>
-            </div>
-
-            <!-- Tamanho do Mapa — retrátil -->
-            <div>
-                <button class="collapse-btn" onclick="toggleMapSize()">
-                    <span class="flex-1">📐 Tamanho do Mapa</span>
-                    <span id="map-size-arrow" class="ml-2">▸</span>
-                </button>
-                <div class="collapse-panel" id="map-size-panel">
-                    <div class="space-y-1.5">
-                        <div class="size-row" id="row-width">
-                            <span class="text-[9px] text-slate-500 w-10 uppercase flex-shrink-0">Larg.</span>
-                            <button class="map-size-btn" onclick="resizeMap('width',-100)">−</button>
-                            <span id="map-w-txt" class="text-[9px] text-indigo-400 font-bold flex-1 text-center">1200px</span>
-                            <button class="map-size-btn" onclick="resizeMap('width',100)">+</button>
-                        </div>
-                        <div class="size-row" id="row-height">
-                            <span class="text-[9px] text-slate-500 w-10 uppercase flex-shrink-0">Alt.</span>
-                            <button class="map-size-btn" onclick="resizeMap('height',-100)">−</button>
-                            <span id="map-h-txt" class="text-[9px] text-indigo-400 font-bold flex-1 text-center">800px</span>
-                            <button class="map-size-btn" onclick="resizeMap('height',100)">+</button>
-                        </div>
-                        <p class="text-[8px] text-slate-600 text-center pt-1">↕ Roda do mouse nas linhas acima</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ─ INICIATIVA ─ -->
-        <section class="space-y-2">
-            <div class="flex items-center justify-between">
-                <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">⚡ Iniciativa</h3>
-                <div class="flex gap-1">
-                    <button onclick="nextTurn()"       class="text-[9px] font-bold px-2 py-1 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all" title="Próximo turno">▶</button>
-                    <button onclick="resetInitiative()" class="text-[9px] font-bold px-2 py-1 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:bg-slate-700 transition-all" title="Resetar">↺</button>
-                </div>
-            </div>
-            <div class="mestre-only flex gap-1">
-                <input type="text"   id="init-name-input" placeholder="Nome"  class="flex-1 bg-slate-800/60 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px] text-slate-300 outline-none focus:border-indigo-500" style="min-width:0">
-                <input type="number" id="init-roll-input" placeholder="Rol."  class="w-12 bg-slate-800/60 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px] text-slate-300 outline-none focus:border-indigo-500 text-center">
-                <button onclick="addInitEntry()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-bold hover:bg-indigo-600 hover:text-white transition-all">+</button>
-            </div>
-            <div id="initiative-list" class="space-y-1 min-h-[40px]">
-                <p class="text-[9px] text-slate-600 text-center py-2">Sem entradas.</p>
-            </div>
-        </section>
-
-        <!-- ─ DADOS ─ -->
-        <section class="space-y-2">
-            <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">🎲 Rolagem de Dados</h3>
-
-            <!-- Tipo de dado -->
-            <div class="flex flex-wrap gap-1.5" id="dice-type-grid">
-                <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d4</button>
-                <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d6</button>
-                <button onclick="setDiceType(8)"   id="dt-8"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d8</button>
-                <button onclick="setDiceType(10)"  id="dt-10"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d10</button>
-                <button onclick="setDiceType(12)"  id="dt-12"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d12</button>
-                <button onclick="setDiceType(20)"  id="dt-20"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black active">d20</button>
-                <button onclick="setDiceType(100)" id="dt-100" class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d100</button>
-            </div>
-
-            <!-- Quantidade e Bônus -->
-            <div class="flex gap-2">
-                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
-                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Qtd.</p>
-                    <div class="flex items-center justify-between gap-1">
-                        <button onclick="changeDiceCount(-1)" class="map-size-btn">−</button>
-                        <span id="dice-count-txt" class="text-xs font-black text-indigo-400">1</span>
-                        <button onclick="changeDiceCount(1)"  class="map-size-btn">+</button>
-                    </div>
-                </div>
-                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
-                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Bônus</p>
-                    <div class="flex items-center justify-between gap-1">
-                        <button onclick="changeDiceBonus(-1)" class="map-size-btn">−</button>
-                        <span id="dice-bonus-txt" class="text-xs font-black text-emerald-400">+0</span>
-                        <button onclick="changeDiceBonus(1)"  class="map-size-btn">+</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preview e botão -->
-            <div class="text-center">
-                <p id="dice-preview" class="text-[9px] text-slate-500 mb-1.5">1d20</p>
-                <button onclick="roll()" class="w-full dice-btn py-2.5 rounded-xl text-[11px] font-black hover:bg-indigo-600 hover:text-white" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#a5b4fc;">🎲 ROLAR</button>
-            </div>
-
-            <!-- Histórico compartilhado (tempo real) -->
-            <div id="dice-history" class="bg-black/20 rounded-2xl p-3 h-44 overflow-y-auto space-y-1.5 border border-white/5"></div>
-        </section>
-
-    </div>
-
-    <input type="file" id="f-map"   class="hidden" accept="image/*">
-    <input type="file" id="f-token" class="hidden" accept="image/*">
-</div>
-
-<!-- ══ VIEWPORT ══ -->
-<div id="viewport">
-    <div id="map-container">
-        <img id="active-map" alt="">
-        <div id="grid-overlay"></div>
-        <div id="tokens-layer"></div>
-        <canvas id="fog-canvas"></canvas>
-        <canvas id="ruler-canvas"></canvas>
-    </div>
-</div>
-
-<script type="module">
-    /* ─── Estado Global ─── */
-    const state = {
-        role: 'jogador',
-        zoom: 1, pan: { x: 100, y: 100 },
-        gridSize: 60, opacity: 0.2,
-        mapWidth: 1200, mapHeight: 800,
-        fogCells: new Set(),
-        mode: 'move',
-        initiative: [], initiativeTurn: 0,
-        ruler: null,
-        isFogPainting: false, isRulerActive: false,
-        pendingTokenSize: 1,
-    };
-
-    /* ─── Refs ─── */
-    const viewport    = document.getElementById('viewport');
-    const container   = document.getElementById('map-container');
-    const mapImg      = document.getElementById('active-map');
-    const gridOverlay = document.getElementById('grid-overlay');
-    const fogCanvas   = document.getElementById('fog-canvas');
-    const rulerCanvas = document.getElementById('ruler-canvas');
-    const fogCtx      = fogCanvas.getContext('2d');
-    const rulerCtx    = rulerCanvas.getContext('2d');
-    const ctxMenu     = document.getElementById('ctx-menu');
-    let ctxTokenId    = null;
-    const tokenDataMap = {};   // id → { playerControlled, ... }
-
-    function _el(id) { return document.getElementById(id); }
-
-    /* ─── Render inicial ─── */
-    renderMap();
-
-    /* ─── Entrada ─── */
-    window.startVTT = async (role) => {
-        const { auth, signInAnonymously } = window.vtt;
-        state.role = role;
-        if (role === 'mestre') document.body.classList.add('is-mestre');
-        _el('role-label').innerText = role === 'mestre' ? 'Mestre' : 'Jogador';
-        _el('auth-log').innerText = 'Conectando...';
-        try {
-            await signInAnonymously(auth);
-            _el('setup-modal').style.display = 'none';
-            _el('sync-dot').classList.replace('bg-red-500', 'bg-green-500');
-            initSync();
-        } catch (err) {
-            _el('auth-log').innerText = 'Erro ao conectar!';
-            console.error(err);
-        }
-    };
-
-    /* ─── Firestore Sync ─── */
-    async function initSync() {
-        const { db, appId, onSnapshot, doc, setDoc, getDoc, collection } = window.vtt;
-        const worldRef = doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current');
-
-        // Cria ou atualiza o documento garantindo que todos os campos existam
-        await setDoc(worldRef, {
-            grid: 60, opacity: 0.2, mapUrl: '',
-            mapWidth: 1200, mapHeight: 800,
-            camera: { zoom: 1, pan: { x: 100, y: 100 } },
-            fog: [], initiative: [], initiativeTurn: 0, ping: null
-        }, { merge: true }); // merge: true preserva campos existentes
-
-        onSnapshot(worldRef, (snap) => {
-            if (!snap.exists()) return;
-            const d = snap.data();
-
-            state.gridSize = d.grid ?? 60;
-            state.opacity  = d.opacity ?? 0.2;
-            if (d.mapWidth)  state.mapWidth  = d.mapWidth;
-            if (d.mapHeight) state.mapHeight = d.mapHeight;
-
-            if (state.role === 'jogador' && d.camera) {
-                state.zoom = d.camera.zoom;
-                state.pan  = { ...d.camera.pan };
-            }
-
-            if (d.mapUrl && d.mapUrl !== '') {
-                if (mapImg.getAttribute('data-src') !== d.mapUrl) {
-                    mapImg.setAttribute('data-src', d.mapUrl);
-                    mapImg.src = d.mapUrl;
-                    mapImg.style.display = 'block';
-                }
-            } else {
-                mapImg.style.display = 'none';
-                mapImg.removeAttribute('src');
-                mapImg.removeAttribute('data-src');
-            }
-
-            // Névoa — atualiza para TODOS (mestre e jogadores)
-            state.fogCells = new Set(d.fog ?? []);
-
-            state.initiative     = d.initiative     ?? [];
-            state.initiativeTurn = d.initiativeTurn ?? 0;
-            renderInitiative();
-
-            if (d.ping && d.ping.ts && (Date.now() - d.ping.ts) < 4000) {
-                showPing(d.ping.x, d.ping.y);
-            }
-
-            renderMap();
-        }, (e) => console.error('Sync mundo:', e));
-
-        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), (snap) => {
-            snap.docChanges().forEach(change => {
-                if (change.type === 'removed') {
-                    _el('tw-' + change.doc.id)?.remove();
-                } else {
-                    updateTokenDOM(change.doc.id, change.doc.data());
-                }
-            });
-        }, (e) => console.error('Sync tokens:', e));
-
-        // Histórico de rolagens — compartilhado em tempo real
-        onSnapshot(
-            collection(db, 'artifacts', appId, 'public', 'data', 'dice-rolls'),
-            (snap) => {
-                const entries = [];
-                snap.forEach(d => entries.push({ id: d.id, ...d.data() }));
-                entries.sort((a, b) => b.ts - a.ts);
-                renderDiceHistory(entries.slice(0, 40));
-            },
-            (e) => console.error('Sync dados:', e)
-        );
-    }
-
-    /* ─── Utilitários ─── */
-    function snapToGrid(v) { return Math.floor(v / state.gridSize) * state.gridSize; }
-    function cellKey(c, r) { return `${c},${r}`; }
-    function mapCoords(cx, cy) {
-        const r = container.getBoundingClientRect();
-        return { x: (cx - r.left) / state.zoom, y: (cy - r.top) / state.zoom };
-    }
-
-    /* ─── Render Principal ─── */
-    function renderMap() {
-        container.style.width     = state.mapWidth  + 'px';
-        container.style.height    = state.mapHeight + 'px';
-        container.style.transform = `translate(${state.pan.x}px,${state.pan.y}px) scale(${state.zoom})`;
-
-        gridOverlay.style.backgroundSize = `${state.gridSize}px ${state.gridSize}px`;
-        gridOverlay.style.opacity        = state.opacity;
-
-        // Redimensiona canvas sem limpar desnecessariamente
-        if (fogCanvas.width !== state.mapWidth || fogCanvas.height !== state.mapHeight) {
-            fogCanvas.width  = state.mapWidth;
-            fogCanvas.height = state.mapHeight;
-        }
-        if (rulerCanvas.width !== state.mapWidth || rulerCanvas.height !== state.mapHeight) {
-            rulerCanvas.width  = state.mapWidth;
-            rulerCanvas.height = state.mapHeight;
-        }
-
-        renderFog();
-        renderRuler();
-        updateTokenSizes();
-
-        const g = _el('grid-txt');    if (g) g.innerText = state.gridSize + 'px';
-        const o = _el('opacity-txt'); if (o) o.innerText = Math.round(state.opacity * 100) + '%';
-        const or = _el('opacity-range'); if (or) or.value = state.opacity * 100;
-        const gr = _el('grid-range');    if (gr) gr.value = state.gridSize;
-        const mw = _el('map-w-txt'); if (mw) mw.innerText = state.mapWidth  + 'px';
-        const mh = _el('map-h-txt'); if (mh) mh.innerText = state.mapHeight + 'px';
-    }
-
-    /* ─── Névoa de Guerra ─── */
-    function renderFog() {
-        fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
-        if (!state.fogCells.size) return;
-        fogCtx.fillStyle = 'rgba(8,8,18,0.88)';
-        state.fogCells.forEach(key => {
-            const [c, r] = key.split(',').map(Number);
-            fogCtx.fillRect(c * state.gridSize, r * state.gridSize, state.gridSize, state.gridSize);
-        });
-    }
-
-    // Salva névoa no Firestore (imediatamente, sem debounce para operações críticas)
-    async function saveFogNow() {
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(
-                doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'),
-                { fog: [...state.fogCells] },
-                { merge: true }
-            );
-        } catch (e) {
-            console.error('Erro ao salvar névoa:', e);
-        }
-    }
-
-    let fogTimer = null;
-    function saveFogDebounced() {
-        clearTimeout(fogTimer);
-        fogTimer = setTimeout(saveFogNow, 350);
-    }
-
-    window.clearFog = async () => {
-        state.fogCells.clear();
-        renderFog();
-        await saveFogNow();
-    };
-
-    window.fillFog = async () => {
-        const cols = Math.ceil(state.mapWidth  / state.gridSize);
-        const rows = Math.ceil(state.mapHeight / state.gridSize);
-        for (let c = 0; c < cols; c++)
-            for (let r = 0; r < rows; r++)
-                state.fogCells.add(cellKey(c, r));
-        renderFog();
-        await saveFogNow();
-    };
-
-    function applyFogAt(cx, cy) {
-        const { x, y } = mapCoords(cx, cy);
-        const c = Math.floor(x / state.gridSize);
-        const r = Math.floor(y / state.gridSize);
-        if (c < 0 || r < 0 || c * state.gridSize > state.mapWidth || r * state.gridSize > state.mapHeight) return;
-        const k = cellKey(c, r);
-        if (state.mode === 'fog-paint') state.fogCells.add(k);
-        else state.fogCells.delete(k);
-        renderFog();
-    }
-
-    /* ─── Régua ─── */
-    function renderRuler() {
-        rulerCtx.clearRect(0, 0, rulerCanvas.width, rulerCanvas.height);
-        if (!state.ruler) return;
-        const { x1, y1, x2, y2 } = state.ruler;
-        const dist = Math.sqrt((x2-x1)**2 + (y2-y1)**2) / state.gridSize;
-
-        rulerCtx.strokeStyle = '#f59e0b';
-        rulerCtx.lineWidth = 2;
-        rulerCtx.setLineDash([6, 4]);
-        rulerCtx.beginPath(); rulerCtx.moveTo(x1, y1); rulerCtx.lineTo(x2, y2); rulerCtx.stroke();
-        rulerCtx.setLineDash([]);
-
-        const mx = (x1+x2)/2, my = (y1+y2)/2;
-        const label = dist.toFixed(1) + ' células';
-        rulerCtx.font = 'bold 12px Inter, sans-serif';
-        const tw = rulerCtx.measureText(label).width;
-        rulerCtx.fillStyle = 'rgba(0,0,0,0.7)';
-        rulerCtx.beginPath();
-        rulerCtx.roundRect(mx - tw/2 - 6, my - 10, tw + 12, 20, 6);
-        rulerCtx.fill();
-        rulerCtx.fillStyle = '#fbbf24';
-        rulerCtx.textAlign = 'center';
-        rulerCtx.textBaseline = 'middle';
-        rulerCtx.fillText(label, mx, my);
-    }
-
-    /* ─── Tokens ─── */
-    function tokenPixelSize(tokenSize) {
-        return state.gridSize * tokenSize - 4;
-    }
-
-    function updateTokenSizes() {
-        document.querySelectorAll('.token').forEach(el => {
-            const ts = parseInt(el.dataset.tokenSize || '1');
-            const px = tokenPixelSize(ts);
-            el.style.width = el.style.height = px + 'px';
-        });
-    }
-
-    function updateTokenDOM(id, data) {
-        const wrapperId = 'tw-' + id;
-        let wrapper = _el(wrapperId);
-        let el;
-        const tokenSize = data.tokenSize || 1;
-
-        if (!wrapper) {
-            wrapper = document.createElement('div');
-            wrapper.id = wrapperId;
-            wrapper.className = 'token-wrapper';
-
-            el = document.createElement('div');
-            el.id = id;
-            el.className = 'token';
-            el.dataset.tokenSize = tokenSize;
-            el.style.backgroundImage = `url(${data.url})`;
-
-            // HP bar
-            const hpBar  = document.createElement('div'); hpBar.className = 'token-hp-bar'; hpBar.id = 'hp-bar-' + id;
-            const hpFill = document.createElement('div'); hpFill.className = 'token-hp-fill'; hpFill.id = 'hp-fill-' + id;
-            hpBar.appendChild(hpFill);
-            el.appendChild(hpBar);
-
-            // Nome
-            const nameEl = document.createElement('div'); nameEl.className = 'token-name'; nameEl.id = 'name-' + id;
-            el.appendChild(nameEl);
-
-            // Badge de controle do jogador
-            const badge = document.createElement('div');
-            badge.className = 'token-player-badge'; badge.id = 'badge-' + id;
-            badge.title = 'Jogadores podem controlar';
-            el.appendChild(badge);
-
-            wrapper.appendChild(el);
-            attachTokenEvents(el, id);
-            _el('tokens-layer').appendChild(wrapper);
-        } else {
-            el = _el(id);
-            el.dataset.tokenSize = tokenSize;
-        }
-
-        // Salva dados localmente para consulta
-        tokenDataMap[id] = { playerControlled: !!data.playerControlled };
-
-        const px = tokenPixelSize(tokenSize);
-        const posX = snapToGrid(data.x) + 2;
-        const posY = snapToGrid(data.y) + 2;
-        wrapper.style.left = posX + 'px';
-        wrapper.style.top  = posY + 'px';
-        el.style.width = el.style.height = px + 'px';
-        el.style.borderColor = data.color || '#ffffff';
-
-        // Badge e cursor baseados em playerControlled
-        const badge = _el('badge-' + id);
-        if (badge) badge.classList.toggle('visible', !!data.playerControlled);
-        el.classList.toggle('player-can-move', !!data.playerControlled);
-        el.classList.toggle('locked', !data.playerControlled && state.role === 'jogador');
-
-        // HP
-        const hp = data.hp ?? null, maxHp = data.maxHp ?? null;
-        const hpBar  = _el('hp-bar-'  + id);
-        const hpFill = _el('hp-fill-' + id);
-        if (hpBar && hpFill && hp !== null && maxHp !== null && maxHp > 0) {
-            hpBar.style.display = 'block';
-            const pct = Math.max(0, Math.min(1, hp / maxHp)) * 100;
-            hpFill.style.width = pct + '%';
-            hpFill.style.background = pct > 50 ? '#22c55e' : pct > 25 ? '#f59e0b' : '#ef4444';
-        } else if (hpBar) {
-            hpBar.style.display = 'none';
-        }
-
-        // Nome
-        const nameEl = _el('name-' + id);
-        if (nameEl) {
-            if (data.name) { nameEl.innerText = data.name; nameEl.style.display = 'block'; }
-            else             { nameEl.style.display = 'none'; }
-        }
-    }
-
-    /* ─── Eventos do Token ─── */
-    function attachTokenEvents(el, id) {
-        el.addEventListener('mousedown', (e) => {
-            if (e.button !== 0 || e.shiftKey || e.ctrlKey) return;
-            if (state.mode !== 'move') return;
-
-            // Verifica permissão de arrastar
-            const isPC = tokenDataMap[id]?.playerControlled;
-            if (state.role !== 'mestre' && !isPC) return;
-
-            e.stopPropagation();
-            el.style.transition = 'none';
-
-            const wrapper = el.parentElement;
-            const sx = e.clientX, sy = e.clientY;
-            const ix = parseFloat(wrapper.style.left) || 0;
-            const iy = parseFloat(wrapper.style.top)  || 0;
-
-            const move = (ev) => {
-                wrapper.style.left = (ix + (ev.clientX - sx) / state.zoom) + 'px';
-                wrapper.style.top  = (iy + (ev.clientY - sy) / state.zoom) + 'px';
-            };
-            const stop = async () => {
-                window.removeEventListener('mousemove', move);
-                window.removeEventListener('mouseup', stop);
-                el.style.transition = '';
-                const fx = snapToGrid(parseFloat(wrapper.style.left) - 2);
-                const fy = snapToGrid(parseFloat(wrapper.style.top)  - 2);
-                wrapper.style.left = (fx + 2) + 'px';
-                wrapper.style.top  = (fy + 2) + 'px';
-                const { db, appId, updateDoc, doc } = window.vtt;
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { x: fx, y: fy });
-            };
-            window.addEventListener('mousemove', move);
-            window.addEventListener('mouseup', stop);
-        });
-
-        el.addEventListener('contextmenu', (e) => {
-            const isPC = tokenDataMap[id]?.playerControlled;
-            // Jogador só abre menu em tokens liberados
-            if (state.role !== 'mestre' && !isPC) return;
-
-            e.preventDefault(); e.stopPropagation();
-            ctxTokenId = id;
-
-            // Mostra/oculta itens de acordo com o papel
-            const isMestre = state.role === 'mestre';
-            document.querySelectorAll('.ctx-gm-only').forEach(el => el.style.display = isMestre ? '' : 'none');
-
-            // Atualiza label do botão de controle do jogador
-            if (isMestre) {
-                _el('ctx-player-ctrl').innerHTML =
-                    isPC ? '🔒 &nbsp;Revogar Controle Jogadores' : '🎮 &nbsp;Liberar para Jogadores';
-            }
-
-            ctxMenu.style.display = 'block';
-            ctxMenu.style.left = e.clientX + 'px';
-            ctxMenu.style.top  = e.clientY + 'px';
-            requestAnimationFrame(() => {
-                const rect = ctxMenu.getBoundingClientRect();
-                if (rect.right  > window.innerWidth)  ctxMenu.style.left = (e.clientX - rect.width)  + 'px';
-                if (rect.bottom > window.innerHeight)  ctxMenu.style.top  = (e.clientY - rect.height) + 'px';
-            });
-        });
-    }
-
-    /* ─── Context Menu ─── */
-    document.addEventListener('click',       (e) => { if (!e.target.closest('#ctx-menu')) closeCtxMenu(); });
-    document.addEventListener('contextmenu', (e) => { if (!e.target.closest('#ctx-menu')) closeCtxMenu(); });
-    function closeCtxMenu() { ctxMenu.style.display = 'none'; ctxTokenId = null; }
-
-    _el('ctx-rename').onclick = () => {
-        const id = ctxTokenId; if (!id) return;
-        closeCtxMenu();
-        openRenameModal(id); // ← id capturado ANTES de fechar o menu
-    };
-
-    _el('ctx-hp').onclick = () => {
-        const id = ctxTokenId; if (!id) return;
-        closeCtxMenu();
-        openHpModal(id); // ← id capturado ANTES de fechar o menu
-    };
-
-    const colorMap = { 'ctx-color-w':'#ffffff','ctx-color-r':'#ef4444','ctx-color-g':'#22c55e','ctx-color-b':'#3b82f6','ctx-color-y':'#f59e0b' };
-    Object.keys(colorMap).forEach(cid => {
-        _el(cid).onclick = async () => {
-            const id = ctxTokenId; if (!id) return;
-            closeCtxMenu();
-            const { db, appId, updateDoc, doc } = window.vtt;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { color: colorMap[cid] });
-        };
-    });
-
-    _el('ctx-init').onclick = () => {
-        const id = ctxTokenId; if (!id) return;
-        const nameEl = _el('name-' + id);
-        const name = (nameEl && nameEl.innerText) || 'Token';
-        closeCtxMenu();
-        const roll = parseInt(prompt(`Rolagem de iniciativa de "${name}":`) || '0') || 0;
-        addInitEntryDirect(id, name, roll);
-    };
-
-    _el('ctx-delete').onclick = async () => {
-        const id = ctxTokenId; if (!id) return;
-        closeCtxMenu();
-        const { db, appId, deleteDoc, doc } = window.vtt;
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id));
-    };
-
-    _el('ctx-player-ctrl').onclick = async () => {
-        const id = ctxTokenId; if (!id) return;
-        const wasPC = tokenDataMap[id]?.playerControlled;
-        closeCtxMenu();
-        try {
-            const { db, appId, updateDoc, doc } = window.vtt;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), {
-                playerControlled: !wasPC
-            });
-        } catch (e) { console.error('Erro ao alterar controle do jogador:', e); }
-    };
-
-    /* ─── HP Modal ─── */
-    let hpTokenId = null;
-    function openHpModal(id) {
-        hpTokenId = id;
-        _el('hp-current-input').value = '';
-        _el('hp-max-input').value = '';
-        _el('hp-modal').classList.add('open');
-        setTimeout(() => _el('hp-current-input').focus(), 50);
-    }
-    _el('hp-cancel').onclick = () => { _el('hp-modal').classList.remove('open'); hpTokenId = null; };
-    _el('hp-save').onclick   = async () => {
-        if (!hpTokenId) return;
-        const hp    = parseInt(_el('hp-current-input').value);
-        const maxHp = parseInt(_el('hp-max-input').value);
-        _el('hp-modal').classList.remove('open');
-        const upd = {};
-        if (!isNaN(hp))    upd.hp    = hp;
-        if (!isNaN(maxHp)) upd.maxHp = maxHp;
-        if (Object.keys(upd).length) {
-            try {
-                const { db, appId, updateDoc, doc } = window.vtt;
-                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', hpTokenId), upd);
-            } catch (e) { console.error('Erro ao salvar HP:', e); }
-        }
-        hpTokenId = null;
-    };
-    _el('hp-modal').addEventListener('keydown', (e) => { if (e.key === 'Enter') _el('hp-save').click(); if (e.key === 'Escape') _el('hp-cancel').click(); });
-
-    /* ─── Rename Modal ─── */
-    let renameTokenId = null;
-    function openRenameModal(id) {
-        renameTokenId = id;
-        const n = _el('name-' + id);
-        _el('rename-input').value = (n && n.innerText) || '';
-        _el('rename-modal').classList.add('open');
-        setTimeout(() => { _el('rename-input').focus(); _el('rename-input').select(); }, 50);
-    }
-    _el('rename-cancel').onclick = () => { _el('rename-modal').classList.remove('open'); renameTokenId = null; };
-    _el('rename-save').onclick   = async () => {
-        if (!renameTokenId) return;
-        const name = _el('rename-input').value.trim();
-        _el('rename-modal').classList.remove('open');
-        try {
-            const { db, appId, updateDoc, doc } = window.vtt;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', renameTokenId), { name });
-        } catch (e) { console.error('Erro ao renomear:', e); }
-        renameTokenId = null;
-    };
-    _el('rename-modal').addEventListener('keydown', (e) => { if (e.key === 'Enter') _el('rename-save').click(); if (e.key === 'Escape') _el('rename-cancel').click(); });
-
-    /* ─── Token Size Modal ─── */
-    window.openTokenSizeModal = () => {
-        _el('token-size-modal').classList.add('open');
-    };
-    window.closeTokenSizeModal = () => {
-        _el('token-size-modal').classList.remove('open');
-    };
-    window.selectTokenSize = (size) => {
-        state.pendingTokenSize = size;
-        _el('token-size-modal').classList.remove('open');
-        _el('f-token').click();
-    };
-
-    /* ─── Iniciativa ─── */
-    function renderInitiative() {
-        const list = _el('initiative-list');
-        if (!state.initiative.length) {
-            list.innerHTML = '<p class="text-[9px] text-slate-600 text-center py-2">Sem entradas.</p>';
-            return;
-        }
-        const sorted = [...state.initiative].sort((a, b) => b.roll - a.roll);
-        list.innerHTML = '';
-        sorted.forEach((entry, idx) => {
-            const curr = idx === (state.initiativeTurn % sorted.length);
-            const div = document.createElement('div');
-            div.className = 'init-entry' + (curr ? ' current' : '');
-            div.innerHTML = `
-                <div class="init-roll">${entry.roll}</div>
-                <div class="init-name">${entry.name}${curr ? ' ◀' : ''}</div>
-                <div class="init-del mestre-only" onclick="removeInitEntry('${entry.id}')">✕</div>
-            `;
-            list.appendChild(div);
-        });
-    }
-
-    window.addInitEntry = () => {
-        const name = _el('init-name-input').value.trim();
-        const roll = parseInt(_el('init-roll-input').value) || 0;
-        if (!name) return;
-        _el('init-name-input').value = '';
-        _el('init-roll-input').value = '';
-        addInitEntryDirect(Date.now().toString(), name, roll);
-    };
-
-    async function addInitEntryDirect(id, name, roll) {
-        const updated = [...state.initiative.filter(e => e.id !== id), { id, name, roll }];
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiative: updated }, { merge: true });
-        } catch (e) { console.error('Erro ao adicionar iniciativa:', e); }
-    }
-
-    window.removeInitEntry = async (id) => {
-        const updated = state.initiative.filter(e => e.id !== id);
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiative: updated, initiativeTurn: 0 }, { merge: true });
-        } catch (e) { console.error(e); }
-    };
-
-    window.nextTurn = async () => {
-        if (!state.initiative.length) return;
-        const next = (state.initiativeTurn + 1) % state.initiative.length;
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: next }, { merge: true });
-        } catch (e) { console.error(e); }
-    };
-
-    window.resetInitiative = async () => {
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: 0 }, { merge: true });
-        } catch (e) { console.error(e); }
-    };
-
-    /* ─── Modo de Ferramenta ─── */
-    window.setMode = (mode) => {
-        state.mode = mode;
-        ['move', 'fog-paint', 'fog-erase'].forEach(m => _el('tool-' + m)?.classList.remove('active'));
-        _el('tool-' + mode)?.classList.add('active');
-        viewport.className = mode === 'fog-paint' ? 'fog-paint' : mode === 'fog-erase' ? 'fog-erase' : '';
-    };
-
-    /* ─── Menu Tamanho do Mapa (retrátil) ─── */
-    window.toggleMapSize = () => {
-        const panel = _el('map-size-panel');
-        const arrow = _el('map-size-arrow');
-        panel.classList.toggle('open');
-        arrow.innerText = panel.classList.contains('open') ? '▾' : '▸';
-    };
-
-    /* ─── Ping ─── */
-    const shownPings = new Set();
-    function showPing(x, y) {
-        const key = `${Math.round(x)},${Math.round(y)},${Math.floor(Date.now() / 2500)}`;
-        if (shownPings.has(key)) return;
-        shownPings.add(key);
-        const dot = document.createElement('div');
-        dot.className = 'ping-dot';
-        dot.style.left = x + 'px'; dot.style.top = y + 'px';
-        container.appendChild(dot);
-        setTimeout(() => dot.remove(), 2600);
-        setTimeout(() => shownPings.delete(key), 5000);
-    }
-
-    async function sendPing(x, y) {
-        showPing(x, y);
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { ping: { x, y, ts: Date.now() } }, { merge: true });
-        } catch (e) { console.error(e); }
-    }
-
-    /* ─── Câmera ─── */
-    window.syncCamera = async () => {
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { camera: { zoom: state.zoom, pan: { x: state.pan.x, y: state.pan.y } } }, { merge: true });
-        } catch (e) { console.error(e); }
-    };
-
-    /* ─── Tamanho do Mapa ─── */
-    let resizeTimer = null;
-    window.resizeMap = (dim, delta) => {
-        if (dim === 'width') state.mapWidth  = Math.max(200, state.mapWidth  + delta);
-        else                 state.mapHeight = Math.max(200, state.mapHeight + delta);
-        renderMap();
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(async () => {
-            try {
-                const { db, appId, doc, setDoc } = window.vtt;
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { mapWidth: state.mapWidth, mapHeight: state.mapHeight }, { merge: true });
-            } catch (e) { console.error(e); }
-        }, 400);
-    };
-
-    _el('row-width').addEventListener('wheel',  (e) => { e.preventDefault(); e.stopPropagation(); resizeMap('width',  e.deltaY < 0 ? 50 : -50); }, { passive: false });
-    _el('row-height').addEventListener('wheel', (e) => { e.preventDefault(); e.stopPropagation(); resizeMap('height', e.deltaY < 0 ? 50 : -50); }, { passive: false });
-
-    /* ─── Grid / Opacidade ─── */
-    _el('grid-range').oninput = (e) => {
-        const { db, appId, doc, setDoc } = window.vtt;
-        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { grid: parseInt(e.target.value) }, { merge: true });
-    };
-    _el('opacity-range').oninput = (e) => {
-        const { db, appId, doc, setDoc } = window.vtt;
-        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { opacity: parseFloat(e.target.value) / 100 }, { merge: true });
-    };
-
-    /* ─── Upload Mapa ─── */
-    _el('f-map').onchange = (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const img = new Image(), reader = new FileReader();
-        reader.onload = (ev) => {
-            img.src = ev.target.result;
-            img.onload = async () => {
-                const canvas = document.createElement('canvas');
-                const MAX = 1800; let w = img.width, h = img.height;
-                if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r); }
-                canvas.width = w; canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                let q = 0.85, url = canvas.toDataURL('image/jpeg', q);
-                while (url.length > 800000 && q > 0.2) { q -= 0.1; url = canvas.toDataURL('image/jpeg', q); }
-                state.mapWidth = w; state.mapHeight = h;
-                try {
-                    const { db, appId, doc, setDoc } = window.vtt;
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { mapUrl: url, mapWidth: w, mapHeight: h }, { merge: true });
-                } catch (err) { console.error('Erro ao salvar mapa:', err); }
-            };
-        };
-        reader.readAsDataURL(file);
-        e.target.value = '';
-    };
-
-    /* ─── Upload Token ─── */
-    _el('f-token').onchange = (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const tokenSize = state.pendingTokenSize || 1;
-        const img = new Image(), reader = new FileReader();
-        reader.onload = (ev) => {
-            img.src = ev.target.result;
-            img.onload = async () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = canvas.height = 256;
-                canvas.getContext('2d').drawImage(img, 0, 0, 256, 256);
-                let q = 0.82, url = canvas.toDataURL('image/jpeg', q);
-                while (url.length > 60000 && q > 0.2) { q -= 0.1; url = canvas.toDataURL('image/jpeg', q); }
-                try {
-                    const { db, appId, addDoc, collection } = window.vtt;
-                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), {
-                        url, x: snapToGrid(120), y: snapToGrid(120),
-                        name: '', color: '#ffffff', tokenSize
-                    });
-                } catch (err) { console.error('Erro ao criar token:', err); }
-            };
-        };
-        reader.readAsDataURL(file);
-        e.target.value = '';
-        state.pendingTokenSize = 1;
-    };
-
-    /* ─── Dados ─── */
-    const diceState = { type: 20, count: 1, bonus: 0 };
-
-    function updateDicePreview() {
-        const bonus = diceState.bonus;
-        const bonusStr = bonus > 0 ? '+' + bonus : bonus < 0 ? String(bonus) : '';
-        const preview = diceState.count + 'd' + diceState.type + bonusStr;
-        const el = _el('dice-preview'); if (el) el.innerText = preview;
-        const ct = _el('dice-count-txt'); if (ct) ct.innerText = diceState.count;
-        const bt = _el('dice-bonus-txt');
-        if (bt) { bt.innerText = bonus >= 0 ? '+' + bonus : String(bonus); bt.style.color = bonus < 0 ? '#f87171' : '#34d399'; }
-    }
-
-    window.setDiceType = (s) => {
-        diceState.type = s;
-        document.querySelectorAll('#dice-type-grid .dice-btn').forEach(b => b.classList.remove('active'));
-        const btn = _el('dt-' + s); if (btn) btn.classList.add('active');
-        updateDicePreview();
-    };
-
-    window.changeDiceCount = (delta) => {
-        diceState.count = Math.max(1, Math.min(20, diceState.count + delta));
-        updateDicePreview();
-    };
-
-    window.changeDiceBonus = (delta) => {
-        diceState.bonus += delta;
-        updateDicePreview();
-    };
-
-    window.roll = async () => {
-        const { type, count, bonus } = diceState;
-        const rolls = [];
-        for (let i = 0; i < count; i++) rolls.push(Math.floor(Math.random() * type) + 1);
-        const total = rolls.reduce((a, b) => a + b, 0) + bonus;
-        const playerName = state.role === 'mestre' ? 'Mestre' : 'Jogador';
-        try {
-            const { db, appId, addDoc, collection } = window.vtt;
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'dice-rolls'), {
-                playerName, type, count, bonus, rolls, total, ts: Date.now()
-            });
-        } catch (e) { console.error('Erro ao salvar rolagem:', e); }
-    };
-
-    function renderDiceHistory(entries) {
-        const hist = _el('dice-history');
-        if (!hist) return;
-        hist.innerHTML = '';
-        entries.forEach(d => {
-            const bonusStr = d.bonus > 0 ? '+' + d.bonus : d.bonus < 0 ? String(d.bonus) : '';
-            const formula = d.count + 'd' + d.type + bonusStr;
-            const isCrit = d.count === 1 && d.rolls[0] === d.type;
-            const isFumble = d.count === 1 && d.rolls[0] === 1;
-            const bg = isCrit ? 'rgba(34,197,94,0.08)' : isFumble ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)';
-            const border = isCrit ? 'rgba(34,197,94,0.2)' : isFumble ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.05)';
-            const totalColor = isCrit ? '#22c55e' : isFumble ? '#ef4444' : '#a5b4fc';
-            const tag = isCrit ? ' <span style="color:#22c55e;font-weight:900">CRÍTICO!</span>' : isFumble ? ' <span style="color:#ef4444;font-weight:900">FALHA!</span>' : '';
-            const entry = document.createElement('div');
-            entry.style.cssText = `display:flex;justify-content:space-between;align-items:center;background:${bg};border:1px solid ${border};padding:6px 8px;border-radius:8px;gap:6px;`;
-            entry.innerHTML = `
-                <div style="flex:1;min-width:0">
-                    <div style="font-size:9px;font-weight:700;color:#64748b">${d.playerName} — <span style="color:#94a3b8">${formula}</span></div>
-                    <div style="font-size:8px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">[${d.rolls.join(', ')}]${d.bonus !== 0 ? '<span style=\"color:' + (d.bonus > 0 ? '#34d399' : '#f87171') + '\">' + (d.bonus > 0 ? '+' : '') + d.bonus + '</span>' : ''}${tag}</div>
-                </div>
-                <span style="font-size:15px;font-weight:900;color:${totalColor};flex-shrink:0">${d.total}</span>
-            `;
-            hist.appendChild(entry);
-        });
-    }
-
-    /* ─── Eventos do Viewport ─── */
-    let isPanning = false;
-
-    viewport.addEventListener('mousedown', (e) => {
-        if (e.button !== 0) return;
-
-        // Ctrl+Clique = Ping
-        if (e.ctrlKey && state.role === 'mestre') {
-            e.preventDefault();
-            const { x, y } = mapCoords(e.clientX, e.clientY);
-            sendPing(x, y); return;
-        }
-
-        // Shift+Clique = Régua
-        if (e.shiftKey) {
-            e.preventDefault();
-            const { x, y } = mapCoords(e.clientX, e.clientY);
-            state.ruler = { x1: x, y1: y, x2: x, y2: y };
-            state.isRulerActive = true; return;
-        }
-
-        // Névoa
-        if (state.mode === 'fog-paint' || state.mode === 'fog-erase') {
-            state.isFogPainting = true;
-            applyFogAt(e.clientX, e.clientY); return;
-        }
-
-        // Pan — apenas no fundo
-        const bg = e.target === viewport || e.target === container ||
-                   e.target === mapImg   || e.target === gridOverlay ||
-                   e.target === fogCanvas || e.target === rulerCanvas;
-        if (!bg) return;
-        isPanning = true;
-        const sx = e.clientX - state.pan.x, sy = e.clientY - state.pan.y;
-        const move = (ev) => { state.pan.x = ev.clientX - sx; state.pan.y = ev.clientY - sy; renderMap(); };
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', () => { isPanning = false; window.removeEventListener('mousemove', move); }, { once: true });
-    });
-
-    window.addEventListener('mousemove', (e) => {
-        if (state.isFogPainting) applyFogAt(e.clientX, e.clientY);
-        if (state.isRulerActive && state.ruler) {
-            const { x, y } = mapCoords(e.clientX, e.clientY);
-            state.ruler.x2 = x; state.ruler.y2 = y; renderRuler();
-        }
-    });
-
-    window.addEventListener('mouseup', () => {
-        if (state.isFogPainting) { state.isFogPainting = false; saveFogDebounced(); }
-        if (state.isRulerActive) {
-            state.isRulerActive = false;
-            setTimeout(() => { state.ruler = null; renderRuler(); }, 1500);
-        }
-    });
-
-    viewport.addEventListener('wheel', (e) => {
-        if (e.target.closest('.sidebar')) return;
-        e.preventDefault();
-        state.zoom = Math.min(Math.max(state.zoom + (e.deltaY > 0 ? -0.05 : 0.05), 0.1), 4);
-        renderMap();
-    }, { passive: false });
-
-    // Enter nos inputs de iniciativa
-    _el('init-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addInitEntry(); });
-    _el('init-roll-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addInitEntry(); });
-</script>
-</body>
-</html>
+                <div class="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-4">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold text
