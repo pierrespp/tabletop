@@ -11,7 +11,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBVw6l8IfXlGTFKHHJLjsqAgyRwlxaVzvg",
@@ -22,12 +22,23 @@
             appId: "1:562514175214:web:8c3be376fb82b0609d7fff"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = 'vtt-sessao-001';
+        try {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            const appId = 'vtt-sessao-001';
 
-        window.vtt = { db, auth, appId, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously, serverTimestamp };
+            // Expõe para o escopo global de forma segura
+            window.vtt = { 
+                db, auth, appId, doc, setDoc, getDoc, onSnapshot, 
+                collection, updateDoc, addDoc, deleteDoc, 
+                signInAnonymously, serverTimestamp, onAuthStateChanged 
+            };
+            
+            console.log("Firebase inicializado com sucesso.");
+        } catch (error) {
+            console.error("Erro ao inicializar Firebase:", error);
+        }
     </script>
 
     <style>
@@ -103,66 +114,308 @@
         .user-badge {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             padding: 8px 12px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.05);
             border-radius: 12px;
-            margin-bottom: 6px;
+            font-size: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
-        .user-badge.is-mestre-badge {
-            border-color: rgba(99, 102, 241, 0.4);
-            background: rgba(99, 102, 241, 0.1);
-        }
+        .user-badge.mestre { border-color: #6366f1; background: rgba(99, 102, 241, 0.1); }
 
         input[type="range"] { accent-color: #6366f1; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body>
 
-    <!-- Modal de Login -->
+    <!-- Modal de Entrada -->
     <div id="setup-modal" class="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
             <h1 class="text-3xl font-black text-white mb-8 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
-            <input type="text" id="user-name" placeholder="Seu Nome de Jogador" class="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <input type="text" id="user-name" placeholder="Teu Nome" class="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <div class="space-y-3">
-                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all shadow-lg">Entrar como Mestre</button>
-                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all">Entrar como Jogador</button>
+                <button id="btn-mestre" onclick="handleStart('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all shadow-lg">Entrar como Mestre</button>
+                <button id="btn-jogador" onclick="handleStart('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all">Entrar como Jogador</button>
             </div>
-            <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando...</p>
+            <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando Escolha...</p>
         </div>
     </div>
 
-    <!-- Sidebar Lateral -->
+    <!-- Sidebar -->
     <div class="sidebar">
         <div class="flex items-center justify-between mb-6">
             <div>
-                <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Mesa Virtual</h2>
-                <p class="text-[9px] text-slate-500 font-mono" id="session-id">ID: vtt-001</p>
+                <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Dashboard</h2>
+                <p class="text-[9px] text-slate-500 font-mono">Sessão Ativa</p>
             </div>
-            <div id="sync-status" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+            <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
         </div>
 
+        <section class="mb-6">
+            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Conectados</h3>
+            <div id="users-list" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                <!-- Populado via JS -->
+            </div>
+        </section>
+
         <div class="flex-1 overflow-y-auto space-y-8 pr-2">
-            <!-- Tabela de Quem está Online -->
-            <section>
-                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Conectados no Momento</h3>
-                <div id="players-list" class="space-y-1">
-                    <!-- Gerado via JS -->
+            <!-- Ferramentas do Mestre -->
+            <section class="mestre-only space-y-4">
+                <button onclick="document.getElementById('f-map').click()" class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-3 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">Trocar Mapa</button>
+                <button onclick="document.getElementById('f-token').click()" class="w-full bg-slate-800/50 border border-slate-700 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all">Novo Token</button>
+                
+                <div class="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-4">
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase">Grid: <span id="grid-txt">60px</span></div>
+                        <input type="range" id="grid-range" min="30" max="150" value="60" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                    </div>
                 </div>
             </section>
 
-            <!-- Ações do Mestre -->
-            <section class="mestre-only space-y-5">
-                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Ferramentas</h3>
-                <div class="grid grid-cols-1 gap-2">
-                    <button onclick="document.getElementById('f-map').click()" class="bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-3 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">Trocar Mapa</button>
-                    <button onclick="document.getElementById('f-token').click()" class="bg-slate-800 border border-slate-700 py-3 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all">Adicionar Token</button>
-                    <button onclick="syncCamera()" class="bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 py-3 rounded-xl text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all">Sincronizar Visão</button>
+            <!-- Rolagem -->
+            <section class="space-y-4">
+                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rolagem</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="roll(20)" class="dice-btn py-3 rounded-xl text-xs font-black">d20</button>
+                    <button onclick="roll(6)" class="dice-btn py-3 rounded-xl text-xs font-black">d6</button>
+                    <button onclick="roll(100)" class="dice-btn py-3 rounded-xl text-xs font-black">d%</button>
                 </div>
+                <div id="dice-history" class="bg-black/20 rounded-2xl p-4 h-32 overflow-y-auto space-y-2 border border-white/5 flex flex-col-reverse text-[10px]"></div>
+            </section>
+        </div>
 
-                <div class="bg-black/20 p-4 rounded-2xl border border-white/5 space-y-4">
-                    <div>
-                        <div class="flex justify-between text-[10px] font-bold text
+        <input type="file" id="f-map" class="hidden" accept="image/*">
+        <input type="file" id="f-token" class="hidden" accept="image/*">
+    </div>
+
+    <div id="viewport">
+        <div id="map-container">
+            <img id="active-map" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="">
+            <div id="grid-overlay"></div>
+            <div id="tokens-layer"></div>
+        </div>
+    </div>
+
+    <script>
+        const state = { 
+            role: 'jogador', 
+            name: 'Anónimo',
+            zoom: 1, 
+            pan: { x: 100, y: 100 }, 
+            gridSize: 60, 
+            opacity: 0.2
+        };
+
+        const viewport = document.getElementById('viewport');
+        const container = document.getElementById('map-container');
+        const mapImg = document.getElementById('active-map');
+        const gridOverlay = document.getElementById('grid-overlay');
+
+        // Função chamada pelo botão
+        async function handleStart(role) {
+            if (!window.vtt) {
+                document.getElementById('auth-log').innerText = "Erro: Firebase ainda carregando...";
+                return;
+            }
+
+            const { auth, signInAnonymously } = window.vtt;
+            const log = document.getElementById('auth-log');
+            const nameInput = document.getElementById('user-name');
+            
+            state.role = role;
+            state.name = nameInput.value.trim() || (role === 'mestre' ? 'Mestre' : 'Jogador');
+            
+            log.innerText = "Conectando...";
+            
+            try {
+                const cred = await signInAnonymously(auth);
+                document.getElementById('setup-modal').style.display = 'none';
+                if(role === 'mestre') document.body.classList.add('is-mestre');
+                
+                document.getElementById('sync-dot').classList.replace('bg-red-500', 'bg-green-500');
+                initSync(cred.user.uid);
+            } catch (err) { 
+                log.innerText = "Erro ao conectar: " + err.message;
+                console.error(err); 
+            }
+        }
+
+        async function initSync(uid) {
+            const { db, appId, onSnapshot, doc, getDoc, setDoc, collection, serverTimestamp } = window.vtt;
+            
+            const worldDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current');
+            const presenceDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'presence', uid);
+
+            // 1. Registro de Presença
+            await setDoc(presenceDocRef, {
+                uid,
+                name: state.name,
+                role: state.role,
+                lastSeen: serverTimestamp()
+            });
+
+            // 2. Ouvinte de Utilizadores Conectados
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'presence'), (snap) => {
+                const list = document.getElementById('users-list');
+                list.innerHTML = '';
+                snap.forEach(docSnap => {
+                    const u = docSnap.data();
+                    const badge = document.createElement('div');
+                    badge.className = `user-badge ${u.role === 'mestre' ? 'mestre' : ''}`;
+                    badge.innerHTML = `
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span class="truncate font-bold">${u.name}</span>
+                        <span class="text-[8px] opacity-50 ml-auto uppercase">${u.role}</span>
+                    `;
+                    list.appendChild(badge);
+                });
+            }, (err) => console.error("Erro na lista de usuários:", err));
+
+            // 3. Lógica do Mundo (Mapa) - Verificação de existência para não sobrescrever
+            const snapInitial = await getDoc(worldDocRef);
+            if (!snapInitial.exists()) {
+                await setDoc(worldDocRef, {
+                    grid: 60,
+                    opacity: 0.2,
+                    mapUrl: ""
+                });
+            }
+            
+            onSnapshot(worldDocRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    state.gridSize = data.grid || 60;
+                    
+                    if (data.mapUrl && mapImg.src !== data.mapUrl) {
+                        mapImg.src = data.mapUrl;
+                        mapImg.onload = () => {
+                            container.style.width = mapImg.width + "px";
+                            container.style.height = mapImg.height + "px";
+                            render();
+                        };
+                    }
+                    render();
+                }
+            });
+
+            // 4. Ouvinte de Tokens
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), (snap) => {
+                snap.docChanges().forEach(change => {
+                    if (change.type === "removed") {
+                        document.getElementById(change.doc.id)?.remove();
+                    } else {
+                        updateTokenDOM(change.doc.id, change.doc.data());
+                    }
+                });
+            });
+        }
+
+        function updateTokenDOM(id, data) {
+            let el = document.getElementById(id);
+            if (!el) {
+                el = document.createElement('div');
+                el.id = id; el.className = 'token absolute z-20';
+                el.style.backgroundImage = `url(${data.url})`;
+                attachTokenDrag(el, id);
+                document.getElementById('tokens-layer').appendChild(el);
+            }
+            const size = state.gridSize - 4;
+            el.style.width = el.style.height = `${size}px`;
+            el.style.left = `${data.x + 2}px`; 
+            el.style.top = `${data.y + 2}px`;
+        }
+
+        function attachTokenDrag(el, id) {
+            el.onmousedown = (e) => {
+                if (state.role !== 'mestre') return;
+                e.stopPropagation();
+                const startX = e.clientX, startY = e.clientY;
+                const initialX = el.offsetLeft, initialY = el.offsetTop;
+                
+                const move = (ev) => {
+                    el.style.left = (initialX + (ev.clientX - startX) / state.zoom) + "px";
+                    el.style.top = (initialY + (ev.clientY - startY) / state.zoom) + "px";
+                };
+                
+                const stop = async () => {
+                    window.removeEventListener('mousemove', move);
+                    window.removeEventListener('mouseup', stop);
+                    const { db, appId, updateDoc, doc } = window.vtt;
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { 
+                        x: el.offsetLeft, 
+                        y: el.offsetTop 
+                    });
+                };
+                window.addEventListener('mousemove', move);
+                window.addEventListener('mouseup', stop);
+            };
+        }
+
+        function render() {
+            container.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.zoom})`;
+            gridOverlay.style.backgroundSize = `${state.gridSize}px ${state.gridSize}px`;
+            document.getElementById('grid-txt').innerText = state.gridSize + "px";
+        }
+
+        // Eventos UI
+        document.getElementById('grid-range').oninput = (e) => {
+            const val = parseInt(e.target.value);
+            const { db, appId, updateDoc, doc } = window.vtt;
+            updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { grid: val });
+        };
+
+        document.getElementById('f-map').onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                const { db, appId, updateDoc, doc } = window.vtt;
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
+                    mapUrl: ev.target.result
+                });
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        document.getElementById('f-token').onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                const { db, appId, addDoc, collection } = window.vtt;
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), { 
+                    url: ev.target.result, 
+                    x: 100, y: 100 
+                });
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        };
+
+        // Panning e Zoom
+        viewport.onmousedown = (e) => {
+            if(e.button !== 0 || e.target.closest('.sidebar')) return;
+            const startX = e.clientX - state.pan.x, startY = e.clientY - state.pan.y;
+            const move = (ev) => { 
+                state.pan.x = ev.clientX - startX; state.pan.y = ev.clientY - startY; 
+                render(); 
+            };
+            window.addEventListener('mousemove', move);
+            window.addEventListener('mouseup', () => window.removeEventListener('mousemove', move), {once:true});
+        };
+
+        viewport.onwheel = (e) => {
+            if(e.target.closest('.sidebar')) return;
+            e.preventDefault();
+            state.zoom = Math.min(Math.max(state.zoom + (e.deltaY > 0 ? -0.05 : 0.05), 0.1), 4);
+            render();
+        };
+
+        window.roll = (s) => {
+            const r = Math.floor(Math.random() * s) + 1;
+            const history = document.getElementById('dice-history');
+            const div = document.createElement('div');
+            div.className = "p-1 border-b border-white/5";
+            div.innerHTML = `Rolagem d${s}: <strong>${r}</strong>`;
+            history.appendChild(div);
+        };
+
+        render();
+    </script>
+</body>
+</html>
