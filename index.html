@@ -504,18 +504,48 @@
         </section>
 
         <!-- ─ DADOS ─ -->
-        <section class="space-y-3">
+        <section class="space-y-2">
             <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">🎲 Rolagem de Dados</h3>
-            <div class="grid grid-cols-4 gap-1.5">
-                <button onclick="roll(4)"   class="dice-btn py-2 rounded-xl text-[10px] font-black">d4</button>
-                <button onclick="roll(6)"   class="dice-btn py-2 rounded-xl text-[10px] font-black">d6</button>
-                <button onclick="roll(8)"   class="dice-btn py-2 rounded-xl text-[10px] font-black">d8</button>
-                <button onclick="roll(10)"  class="dice-btn py-2 rounded-xl text-[10px] font-black">d10</button>
-                <button onclick="roll(12)"  class="dice-btn py-2 rounded-xl text-[10px] font-black">d12</button>
-                <button onclick="roll(20)"  class="dice-btn py-2 rounded-xl text-[10px] font-black">d20</button>
-                <button onclick="roll(100)" class="dice-btn py-2 rounded-xl text-[10px] font-black col-span-2">d100</button>
+
+            <!-- Tipo de dado -->
+            <div class="flex flex-wrap gap-1.5" id="dice-type-grid">
+                <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d4</button>
+                <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d6</button>
+                <button onclick="setDiceType(8)"   id="dt-8"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d8</button>
+                <button onclick="setDiceType(10)"  id="dt-10"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d10</button>
+                <button onclick="setDiceType(12)"  id="dt-12"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d12</button>
+                <button onclick="setDiceType(20)"  id="dt-20"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black active">d20</button>
+                <button onclick="setDiceType(100)" id="dt-100" class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d100</button>
             </div>
-            <div id="dice-history" class="bg-black/20 rounded-2xl p-3 h-36 overflow-y-auto space-y-1.5 border border-white/5"></div>
+
+            <!-- Quantidade e Bônus -->
+            <div class="flex gap-2">
+                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
+                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Qtd.</p>
+                    <div class="flex items-center justify-between gap-1">
+                        <button onclick="changeDiceCount(-1)" class="map-size-btn">−</button>
+                        <span id="dice-count-txt" class="text-xs font-black text-indigo-400">1</span>
+                        <button onclick="changeDiceCount(1)"  class="map-size-btn">+</button>
+                    </div>
+                </div>
+                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
+                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Bônus</p>
+                    <div class="flex items-center justify-between gap-1">
+                        <button onclick="changeDiceBonus(-1)" class="map-size-btn">−</button>
+                        <span id="dice-bonus-txt" class="text-xs font-black text-emerald-400">+0</span>
+                        <button onclick="changeDiceBonus(1)"  class="map-size-btn">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview e botão -->
+            <div class="text-center">
+                <p id="dice-preview" class="text-[9px] text-slate-500 mb-1.5">1d20</p>
+                <button onclick="roll()" class="w-full dice-btn py-2.5 rounded-xl text-[11px] font-black hover:bg-indigo-600 hover:text-white" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#a5b4fc;">🎲 ROLAR</button>
+            </div>
+
+            <!-- Histórico compartilhado (tempo real) -->
+            <div id="dice-history" class="bg-black/20 rounded-2xl p-3 h-44 overflow-y-auto space-y-1.5 border border-white/5"></div>
         </section>
 
     </div>
@@ -648,6 +678,18 @@
                 }
             });
         }, (e) => console.error('Sync tokens:', e));
+
+        // Histórico de rolagens — compartilhado em tempo real
+        onSnapshot(
+            collection(db, 'artifacts', appId, 'public', 'data', 'dice-rolls'),
+            (snap) => {
+                const entries = [];
+                snap.forEach(d => entries.push({ id: d.id, ...d.data() }));
+                entries.sort((a, b) => b.ts - a.ts);
+                renderDiceHistory(entries.slice(0, 40));
+            },
+            (e) => console.error('Sync dados:', e)
+        );
     }
 
     /* ─── Utilitários ─── */
@@ -1240,15 +1282,74 @@
     };
 
     /* ─── Dados ─── */
-    window.roll = (s) => {
-        const r = Math.floor(Math.random() * s) + 1;
-        const hist = _el('dice-history');
-        const entry = document.createElement('div');
-        entry.className = 'flex justify-between items-center bg-white/5 p-2 rounded-lg border border-white/5';
-        entry.innerHTML = `<span class="text-[10px] text-slate-500 font-bold">d${s}</span><span class="text-xs font-black text-indigo-400">${r}</span>`;
-        hist.prepend(entry);
-        if (hist.children.length > 30) hist.removeChild(hist.lastChild);
+    const diceState = { type: 20, count: 1, bonus: 0 };
+
+    function updateDicePreview() {
+        const bonus = diceState.bonus;
+        const bonusStr = bonus > 0 ? '+' + bonus : bonus < 0 ? String(bonus) : '';
+        const preview = diceState.count + 'd' + diceState.type + bonusStr;
+        const el = _el('dice-preview'); if (el) el.innerText = preview;
+        const ct = _el('dice-count-txt'); if (ct) ct.innerText = diceState.count;
+        const bt = _el('dice-bonus-txt');
+        if (bt) { bt.innerText = bonus >= 0 ? '+' + bonus : String(bonus); bt.style.color = bonus < 0 ? '#f87171' : '#34d399'; }
+    }
+
+    window.setDiceType = (s) => {
+        diceState.type = s;
+        document.querySelectorAll('#dice-type-grid .dice-btn').forEach(b => b.classList.remove('active'));
+        const btn = _el('dt-' + s); if (btn) btn.classList.add('active');
+        updateDicePreview();
     };
+
+    window.changeDiceCount = (delta) => {
+        diceState.count = Math.max(1, Math.min(20, diceState.count + delta));
+        updateDicePreview();
+    };
+
+    window.changeDiceBonus = (delta) => {
+        diceState.bonus += delta;
+        updateDicePreview();
+    };
+
+    window.roll = async () => {
+        const { type, count, bonus } = diceState;
+        const rolls = [];
+        for (let i = 0; i < count; i++) rolls.push(Math.floor(Math.random() * type) + 1);
+        const total = rolls.reduce((a, b) => a + b, 0) + bonus;
+        const playerName = state.role === 'mestre' ? 'Mestre' : 'Jogador';
+        try {
+            const { db, appId, addDoc, collection } = window.vtt;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'dice-rolls'), {
+                playerName, type, count, bonus, rolls, total, ts: Date.now()
+            });
+        } catch (e) { console.error('Erro ao salvar rolagem:', e); }
+    };
+
+    function renderDiceHistory(entries) {
+        const hist = _el('dice-history');
+        if (!hist) return;
+        hist.innerHTML = '';
+        entries.forEach(d => {
+            const bonusStr = d.bonus > 0 ? '+' + d.bonus : d.bonus < 0 ? String(d.bonus) : '';
+            const formula = d.count + 'd' + d.type + bonusStr;
+            const isCrit = d.count === 1 && d.rolls[0] === d.type;
+            const isFumble = d.count === 1 && d.rolls[0] === 1;
+            const bg = isCrit ? 'rgba(34,197,94,0.08)' : isFumble ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.04)';
+            const border = isCrit ? 'rgba(34,197,94,0.2)' : isFumble ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.05)';
+            const totalColor = isCrit ? '#22c55e' : isFumble ? '#ef4444' : '#a5b4fc';
+            const tag = isCrit ? ' <span style="color:#22c55e;font-weight:900">CRÍTICO!</span>' : isFumble ? ' <span style="color:#ef4444;font-weight:900">FALHA!</span>' : '';
+            const entry = document.createElement('div');
+            entry.style.cssText = `display:flex;justify-content:space-between;align-items:center;background:${bg};border:1px solid ${border};padding:6px 8px;border-radius:8px;gap:6px;`;
+            entry.innerHTML = `
+                <div style="flex:1;min-width:0">
+                    <div style="font-size:9px;font-weight:700;color:#64748b">${d.playerName} — <span style="color:#94a3b8">${formula}</span></div>
+                    <div style="font-size:8px;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">[${d.rolls.join(', ')}]${d.bonus !== 0 ? '<span style=\"color:' + (d.bonus > 0 ? '#34d399' : '#f87171') + '\">' + (d.bonus > 0 ? '+' : '') + d.bonus + '</span>' : ''}${tag}</div>
+                </div>
+                <span style="font-size:15px;font-weight:900;color:${totalColor};flex-shrink:0">${d.total}</span>
+            `;
+            hist.appendChild(entry);
+        });
+    }
 
     /* ─── Eventos do Viewport ─── */
     let isPanning = false;
