@@ -11,7 +11,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBVw6l8IfXlGTFKHHJLjsqAgyRwlxaVzvg",
@@ -27,7 +27,7 @@
         const db = getFirestore(app);
         const appId = 'vtt-sessao-001';
 
-        window.vtt = { db, auth, appId, doc, setDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously };
+        window.vtt = { db, auth, appId, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously };
     </script>
 
     <style>
@@ -55,9 +55,11 @@
             transform-origin: 0 0; 
             background: white; 
             box-shadow: 0 0 100px rgba(0,0,0,0.5);
+            min-width: 100px;
+            min-height: 100px;
         }
 
-        #active-map { display: block; pointer-events: none; max-width: none; }
+        #active-map { display: block; pointer-events: none; max-width: none; min-width: 50px; min-height: 50px; }
 
         #grid-overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
@@ -76,7 +78,7 @@
             border: 2px solid #fff;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             cursor: move;
-            transition: left 0.1s ease-out, top 0.1s ease-out; /* Suaviza o encaixe no grid */
+            transition: left 0.1s ease-out, top 0.1s ease-out;
         }
 
         .sidebar { 
@@ -109,10 +111,10 @@
         <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
             <h1 class="text-3xl font-black text-white mb-8 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
             <div class="space-y-3">
-                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all transform active:scale-95 shadow-lg shadow-indigo-500/20">Entrar como Mestre</button>
-                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all transform active:scale-95">Entrar como Jogador</button>
+                <button id="btn-mestre" onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all transform active:scale-95 shadow-lg shadow-indigo-500/20">Entrar como Mestre</button>
+                <button id="btn-jogador" onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all transform active:scale-95">Entrar como Jogador</button>
             </div>
-            <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest"></p>
+            <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando Escolha...</p>
         </div>
     </div>
 
@@ -162,7 +164,7 @@
 
     <div id="viewport">
         <div id="map-container">
-            <img id="active-map" src="" alt="">
+            <img id="active-map" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="">
             <div id="grid-overlay"></div>
             <div id="tokens-layer"></div>
         </div>
@@ -184,8 +186,11 @@
 
         window.startVTT = async (role) => {
             const { auth, signInAnonymously } = window.vtt;
+            const log = document.getElementById('auth-log');
             state.role = role;
             if(role === 'mestre') document.body.classList.add('is-mestre');
+            
+            log.innerText = "Conectando ao servidor...";
             
             try {
                 await signInAnonymously(auth);
@@ -193,13 +198,29 @@
                 const dot = document.getElementById('sync-dot');
                 dot.classList.replace('bg-red-500', 'bg-green-500');
                 initSync();
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                log.innerText = "Erro ao conectar!";
+                console.error(err); 
+            }
         };
 
-        function initSync() {
-            const { db, appId, onSnapshot, doc, collection } = window.vtt;
+        async function initSync() {
+            const { db, appId, onSnapshot, doc, getDoc, setDoc, collection } = window.vtt;
+            const worldDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current');
+
+            // 1. Garante que o documento existe (Fix para Tela Preta em novos projetos)
+            const snapInitial = await getDoc(worldDocRef);
+            if (!snapInitial.exists()) {
+                await setDoc(worldDocRef, {
+                    grid: 60,
+                    opacity: 0.2,
+                    mapUrl: "",
+                    camera: { zoom: 1, pan: { x: 100, y: 100 } }
+                });
+            }
             
-            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), (snap) => {
+            // 2. Ouvinte de mudanças no mundo
+            onSnapshot(worldDocRef, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
                     state.gridSize = data.grid || 60;
@@ -220,19 +241,19 @@
                     }
                     render();
                 }
-            });
+            }, (error) => console.error("Erro no Sync Mundo:", error));
 
+            // 3. Ouvinte de tokens
             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), (snap) => {
                 snap.docChanges().forEach(change => {
                     if (change.type === "removed") document.getElementById(change.doc.id)?.remove();
                     else updateTokenDOM(change.doc.id, change.doc.data());
                 });
-            });
+            }, (error) => console.error("Erro no Sync Tokens:", error));
         }
 
-        // Função utilitária para calcular o alinhamento perfeito no grid
         function snapToGrid(val) {
-            return Math.floor(val / state.gridSize) * state.gridSize;
+            return Math.floor(val / (state.gridSize || 60)) * (state.gridSize || 60);
         }
 
         function updateTokenDOM(id, data) {
@@ -244,11 +265,8 @@
                 attachTokenDrag(el, id);
                 document.getElementById('tokens-layer').appendChild(el);
             }
-            // Tamanho levemente menor que o grid para mostrar a borda branca
             const size = state.gridSize - 4; 
             el.style.width = el.style.height = `${size}px`;
-            
-            // Força a posição sincronizada a estar alinhada
             el.style.left = `${snapToGrid(data.x) + 2}px`; 
             el.style.top = `${snapToGrid(data.y) + 2}px`;
         }
@@ -257,7 +275,7 @@
             el.onmousedown = (e) => {
                 if (state.role !== 'mestre') return;
                 e.stopPropagation();
-                el.style.transition = 'none'; // Desativa transição durante o drag
+                el.style.transition = 'none';
                 
                 const startX = e.clientX, startY = e.clientY;
                 const initialX = el.offsetLeft, initialY = el.offsetTop;
@@ -272,7 +290,6 @@
                     window.removeEventListener('mouseup', stop);
                     el.style.transition = 'left 0.1s ease-out, top 0.1s ease-out';
 
-                    // Cálculo final de SNAP
                     const finalX = snapToGrid(el.offsetLeft);
                     const finalY = snapToGrid(el.offsetTop);
 
@@ -304,7 +321,6 @@
             document.getElementById('opacity-range').value = state.opacity * 100;
             document.getElementById('grid-range').value = state.gridSize;
 
-            // Atualiza tamanho dos tokens existentes se o grid mudar
             document.querySelectorAll('.token').forEach(t => {
                 const size = state.gridSize - 4;
                 t.style.width = t.style.height = `${size}px`;
@@ -324,9 +340,9 @@
         document.getElementById('f-map').onchange = (e) => {
             const reader = new FileReader();
             reader.onload = async (ev) => {
-                const { db, appId, setDoc, doc } = window.vtt;
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
-                    mapUrl: ev.target.result, grid: state.gridSize, opacity: state.opacity 
+                const { db, appId, updateDoc, doc } = window.vtt;
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
+                    mapUrl: ev.target.result
                 });
             };
             reader.readAsDataURL(e.target.files[0]);
@@ -336,7 +352,6 @@
             const reader = new FileReader();
             reader.onload = async (ev) => {
                 const { db, appId, addDoc, collection } = window.vtt;
-                // Tokens novos já nascem alinhados no grid
                 await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), { 
                     url: ev.target.result, 
                     x: snapToGrid(100), 
