@@ -2,16 +2,21 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tabletop RPG Pro | Next-Gen VTT</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
     
+    <!-- PeerJS para WebRTC P2P (Zero Latency Dragging) -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, serverTimestamp, query, where, onDisconnect } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBVw6l8IfXlGTFKHHJLjsqAgyRwlxaVzvg",
@@ -22,755 +27,1126 @@
             appId: "1:562514175214:web:8c3be376fb82b0609d7fff"
         };
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
-            const appId = 'vtt-sessao-001';
-
-            window.vtt = { 
-                db, auth, appId, doc, setDoc, getDoc, onSnapshot, 
-                collection, updateDoc, addDoc, deleteDoc, 
-                signInAnonymously, serverTimestamp, onAuthStateChanged 
-            };
-            console.log("[Core] Firebase Runtime Initialized.");
-        } catch (error) {
-            console.error("[Core] Firebase Init Error:", error);
-        }
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = 'vtt-sessao-001';
+        
+        window.vtt = { db, auth, appId, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously, serverTimestamp, onAuthStateChanged };
+        console.log("[Core] Middleware e Firestore Inicializados.");
     </script>
 
     <style>
-        /* ── Design Tokens 2025/2026 ── */
+        /* ── Design Tokens & Theming (CSS Variables) ── */
         :root {
-            --bg-primary: #020617;
-            --bg-surface: rgba(15,23,42,0.85);
-            --accent: #4f46e5;
+            --bg-base: #020617;
+            --bg-surface: rgba(15, 23, 42, 0.96);
+            --bg-panel: rgba(30, 41, 59, 0.6);
+            --border-light: rgba(255, 255, 255, 0.08);
+            --accent-primary: #4f46e5;
             --accent-hover: #6366f1;
+            --accent-danger: #ef4444;
+            --accent-success: #22c55e;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
+            --shadow-float: 0 20px 50px rgba(0,0,0,0.6);
             --radius-md: 12px;
             --radius-lg: 20px;
-            --shadow-float: 0 20px 50px rgba(0,0,0,0.6);
         }
 
-        body { 
-            background-color: var(--bg-primary); 
-            color: var(--text-main); 
-            font-family: 'Inter', sans-serif; 
-            margin: 0; overflow: hidden; user-select: none; 
+        * { box-sizing: border-box; }
+        body {
+            background-color: var(--bg-base); color: var(--text-main);
+            font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; user-select: none;
         }
 
         /* ── Viewport & Canvas Core ── */
-        #viewport { 
-            width: 100vw; height: 100vh; position: relative; overflow: hidden; 
-            cursor: grab; background: #0f172a; 
+        #viewport {
+            width: 100vw; height: 100vh; position: relative; overflow: hidden;
+            cursor: grab; background: #0f172a;
         }
         #viewport:active { cursor: grabbing; }
+        #viewport.fog-paint { cursor: crosshair !important; }
+        #viewport.fog-erase { cursor: cell !important; }
 
-        #map-container { 
-            position: absolute; transform-origin: 0 0; background: white; 
-            box-shadow: 0 0 100px rgba(0,0,0,0.5); min-width: 100px; min-height: 100px; 
-            will-change: transform;
+        #map-container {
+            position: absolute; transform-origin: 0 0; background: white;
+            box-shadow: 0 0 80px rgba(0,0,0,0.6); will-change: transform;
         }
 
-        #active-map { display: block; pointer-events: none; min-width: 50px; min-height: 50px; }
+        #active-map {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: fill; pointer-events: none; display: none;
+        }
 
-        /* Nova Grade Baseada em Canvas API */
-        #grid-canvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
-        
-        #tokens-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
-        
-        /* ── Tokens Inteligentes ── */
-        .token { 
-            position: absolute; pointer-events: auto; background-size: cover; background-position: center; 
-            border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            cursor: move; transition: filter 0.2s ease; z-index: 20;
-        }
-        .token.hidden-layer { opacity: 0.15; filter: grayscale(100%); pointer-events: none; }
-        
-        /* Barras Dinâmicas de Recurso */
-        .token-bars {
-            position: absolute; bottom: -18px; left: -10%; width: 120%;
-            display: flex; flex-direction: column; gap: 2px; pointer-events: none;
-        }
-        .res-bar { width: 100%; height: 6px; background: rgba(0,0,0,0.8); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
-        .res-fill.hp { background: linear-gradient(90deg, #dc2626, #22c55e); transition: width 0.3s ease; }
-        .res-fill.mp { background: linear-gradient(90deg, #2563eb, #06b6d4); transition: width 0.3s ease; }
-        
-        /* Sistema de Status (Conditions Overlay) */
-        .status-container {
-            position: absolute; top: -10px; right: -10px; display: flex; gap: 2px; flex-wrap: wrap; width: 40px; pointer-events: none;
-        }
-        .status-icon { width: 14px; height: 14px; background: #ef4444; border-radius: 50%; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        /* Camadas WebGL/Canvas de Alta Performance */
+        .canvas-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #grid-canvas { z-index: 5; }
+        #tokens-layer { z-index: 10; pointer-events: none; }
+        #fog-canvas { z-index: 15; }
+        #ruler-canvas { z-index: 20; }
 
-        /* ── UI Modular (Responsive) ── */
-        .sidebar { 
+        /* ── Tokens & Status Overlay ── */
+        .token-wrapper { position: absolute; z-index: 11; pointer-events: none; transition: filter 0.3s; }
+        .token-wrapper.layer-hidden { opacity: 0.25; filter: grayscale(100%) blur(2px); z-index: 9; }
+        
+        .token {
+            position: relative; pointer-events: auto; background-size: cover; background-position: center;
+            border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: move;
+        }
+        .token:hover { outline: 3px solid rgba(99,102,241,0.7); z-index: 30; }
+
+        /* Barras de Recurso Dinâmicas */
+        .token-bars { position: absolute; bottom: -14px; left: -10%; width: 120%; display: flex; flex-direction: column; gap: 2px; }
+        .res-bar { width: 100%; height: 5px; background: rgba(0,0,0,0.8); border-radius: 3px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
+        .res-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+        .res-fill.hp { background: linear-gradient(90deg, #dc2626, #22c55e); }
+        .res-fill.mp { background: linear-gradient(90deg, #2563eb, #06b6d4); }
+
+        .token-name {
+            position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%);
+            font-size: 9px; font-weight: 700; color: #1e293b; background: rgba(255,255,255,0.9);
+            padding: 1px 6px; border-radius: 4px; white-space: nowrap; max-width: 140px;
+            overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Ícones de Status Contextuais */
+        .status-container { position: absolute; top: -5px; right: -5px; display: flex; gap: 2px; flex-wrap: wrap; width: 40px; pointer-events: none; }
+        .status-icon { font-size: 12px; filter: drop-shadow(0 2px 2px rgba(0,0,0,1)); }
+
+        .token-player-badge {
+            position: absolute; top: -5px; left: -5px; width: 12px; height: 12px;
+            background: var(--accent-success); border: 2px solid #0f172a; border-radius: 50%;
+            display: none; z-index: 2; box-shadow: 0 0 6px rgba(34,197,94,0.7);
+        }
+        .token-player-badge.visible { display: block; }
+        .token.player-can-move { cursor: move; }
+        .token.locked { cursor: default; }
+
+        /* ── Ping ── */
+        .ping-dot {
+            position: absolute; z-index: 25; width: 30px; height: 30px; border-radius: 50%;
+            border: 3px solid #f59e0b; transform: translate(-50%, -50%); pointer-events: none;
+            animation: ping-pulse 2.5s ease-out forwards;
+        }
+        @keyframes ping-pulse {
+            0% { transform: translate(-50%,-50%) scale(0.5); opacity: 1; }
+            70% { transform: translate(-50%,-50%) scale(2.5); opacity: 0.3; }
+            100% { transform: translate(-50%,-50%) scale(3); opacity: 0; }
+        }
+
+        /* ── Sidebar Modular (Tendência 2025) ── */
+        .sidebar {
             position: fixed; left: 20px; top: 20px; bottom: 20px; width: 280px;
-            background: var(--bg-surface); backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.05); border-radius: var(--radius-lg);
-            z-index: 100; display: flex; flex-direction: column; padding: 20px;
-            box-shadow: var(--shadow-float); transition: transform 0.3s ease;
-        }
-
-        /* ── Floating Pop-outs (Draggable Windows) ── */
-        .floating-panel {
-            position: absolute; top: 50px; left: 320px; width: 300px;
             background: var(--bg-surface); backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-md);
-            box-shadow: var(--shadow-float); z-index: 150; display: none;
+            border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+            z-index: 100; display: flex; flex-direction: column; padding: 20px;
+            box-shadow: var(--shadow-float); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .fp-header { padding: 10px; background: rgba(0,0,0,0.3); border-radius: var(--radius-md) var(--radius-md) 0 0; cursor: move; display: flex; justify-content: space-between; align-items: center; }
         
         .mestre-only { display: none; }
         body.is-mestre .mestre-only { display: block; }
 
-        .dice-btn { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); transition: all 0.2s; }
-        .dice-btn:hover { background: var(--accent); color: white; transform: translateY(-2px); }
-        
-        /* Controle de Layers */
-        .layer-btn { padding: 4px 8px; font-size: 10px; border-radius: 6px; background: #1e293b; color: white; border: 1px solid #334155; }
-        .layer-btn.active { background: var(--accent); border-color: var(--accent-hover); }
+        /* UI Components */
+        .tool-bar { display: flex; gap: 6px; }
+        .tool-btn {
+            flex: 1; padding: 7px 4px; border-radius: 10px; border: 1px solid var(--border-light);
+            background: var(--bg-panel); color: var(--text-muted); font-size: 10px; font-weight: 700;
+            cursor: pointer; text-align: center; transition: all 0.2s;
+        }
+        .tool-btn:hover { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+        .tool-btn.active { background: var(--accent-primary); color: white; border-color: var(--accent-hover); }
 
-        input[type="range"] { accent-color: var(--accent); }
+        .dice-btn {
+            background: var(--bg-panel); border: 1px solid var(--border-light);
+            color: var(--text-muted); transition: all 0.2s;
+        }
+        .dice-btn:hover { background: var(--accent-primary); color: white; transform: translateY(-2px); }
+
+        /* Z-Layer Switcher */
+        .layer-toggle { display: flex; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 2px; }
+        .layer-btn { flex: 1; padding: 4px; font-size: 9px; font-weight: bold; text-align: center; border-radius: 6px; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .layer-btn.active { background: var(--accent-primary); color: white; }
+
+        /* ── Pop-outs (Draggable Windows) ── */
+        .floating-window {
+            position: absolute; top: 50px; left: 320px; width: 280px;
+            background: var(--bg-surface); backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light); border-radius: var(--radius-md);
+            box-shadow: var(--shadow-float); z-index: 150; display: none; overflow: hidden;
+        }
+        .fw-header {
+            padding: 10px 15px; background: rgba(0,0,0,0.4); cursor: move;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        /* ── Modals & Context Menu ── */
+        #ctx-menu {
+            position: fixed; z-index: 500; background: var(--bg-surface); backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light); border-radius: 14px; padding: 8px; min-width: 190px;
+            box-shadow: var(--shadow-float); display: none;
+        }
+        .ctx-item {
+            padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 600; 
+            color: #cbd5e1; display: flex; align-items: center; gap: 8px; transition: background 0.15s;
+        }
+        .ctx-item:hover { background: rgba(99,102,241,0.2); color: white; }
+        .ctx-item.danger:hover { background: rgba(239,68,68,0.2); color: var(--accent-danger); }
+        .ctx-divider { height: 1px; background: var(--border-light); margin: 4px 0; }
+
+        .modal-overlay {
+            position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.75); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: var(--bg-base); border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 24px; width: 300px; box-shadow: var(--shadow-float); }
+        .modal-input { width: 100%; background: rgba(30,41,59,0.8); border: 1px solid var(--border-light); border-radius: 10px; padding: 9px 12px; color: white; font-size: 13px; outline: none; }
+        .modal-input:focus { border-color: var(--accent-primary); }
+
+        input[type="range"] { accent-color: var(--accent-primary); }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-        /* Media Queries Mobile */
+        /* ── Responsividade Mobile (< 768px) ── */
         @media (max-width: 768px) {
-            .sidebar { left: 0; top: auto; bottom: 0; width: 100%; height: 250px; border-radius: 20px 20px 0 0; }
-            #viewport { height: calc(100vh - 250px); }
-            .floating-panel { left: 10px; top: 10px; width: calc(100% - 20px); }
+            .sidebar { left: 0; top: auto; bottom: 0; width: 100%; height: 300px; border-radius: 24px 24px 0 0; padding: 15px; }
+            #viewport { height: calc(100vh - 300px); }
+            .floating-window { left: 10px !important; top: 10px !important; width: calc(100% - 20px); }
+            .collapse-btn { font-size: 11px; padding: 10px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Setup Modal -->
-    <div id="setup-modal" class="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
-            <h1 class="text-3xl font-black text-white mb-8 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
-            <input type="text" id="user-name" placeholder="Nome de Jogador" class="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<!-- ══ SETUP MODAL ══ -->
+<div id="setup-modal" class="fixed inset-0 bg-black/90 z-[600] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+        <h1 class="text-3xl font-black text-white mb-2 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
+        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-6">Mesa Virtual de RPG</p>
+
+        <div id="setup-step-name">
+            <p class="text-[11px] text-slate-400 mb-3">Como você quer ser chamado?</p>
+            <input id="setup-name-input" type="text" maxlength="24" placeholder="Seu nome..." autocomplete="off"
+                class="w-full bg-slate-800 border border-slate-700 text-white text-center text-base font-bold py-3 rounded-2xl outline-none focus:border-indigo-500 mb-4 placeholder-slate-600">
+            <button onclick="confirmName()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl font-bold transition-all active:scale-95">Continuar →</button>
+        </div>
+
+        <div id="setup-step-role" style="display:none">
+            <p id="setup-name-greeting" class="text-[11px] text-slate-400 mb-4">Como deseja entrar?</p>
             <div class="space-y-3">
-                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all shadow-lg">Mestre (Host)</button>
-                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all">Jogador (Peer)</button>
+                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20">⚔️ Entrar como Mestre</button>
+                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all active:scale-95">🎲 Entrar como Jogador</button>
             </div>
-            <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando Conexão...</p>
         </div>
+
+        <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando Escolha...</p>
     </div>
+</div>
 
-    <!-- Sidebar Fixa -->
-    <div class="sidebar">
-        <div class="flex items-center justify-between mb-4">
-            <div>
-                <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Painel Global</h2>
-                <div class="flex gap-2 items-center mt-1">
-                    <span id="rtc-status" class="text-[8px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">P2P: Disconnected</span>
-                </div>
-            </div>
-            <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
-        </div>
+<!-- ══ CONTEXT MENU ══ -->
+<div id="ctx-menu">
+    <div class="ctx-item" id="ctx-sheet">📄 &nbsp;Abrir Ficha</div>
+    <div class="ctx-item" id="ctx-rename">✏️ &nbsp;Renomear</div>
+    <div class="ctx-item" id="ctx-hp">❤️ &nbsp;Editar HP/MP</div>
+    <!-- Exclusivos Mestre -->
+    <div class="ctx-divider ctx-gm-only"></div>
+    <div class="ctx-item ctx-gm-only" id="ctx-layer">↕️ &nbsp;Alternar Camada (Z-Index)</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-player-ctrl">🎮 &nbsp;Liberar para Jogadores</div>
+    <div class="ctx-divider ctx-gm-only"></div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-w">⬜ &nbsp;Borda Branca</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-r">🔴 &nbsp;Borda Vermelha</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-g">🟢 &nbsp;Borda Verde</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-init">⚡ &nbsp;Adicionar à Iniciativa</div>
+    <div class="ctx-divider ctx-gm-only"></div>
+    <div class="ctx-item danger ctx-gm-only" id="ctx-delete">🗑️ &nbsp;Deletar Token</div>
+</div>
 
-        <div class="flex-1 overflow-y-auto space-y-6 pr-2">
-            <!-- Layers (Multinível) -->
-            <section class="mestre-only space-y-2">
-                <h3 class="text-[10px] font-bold text-slate-500 uppercase">Z-Layer Scene</h3>
-                <div class="flex gap-2">
-                    <button class="layer-btn active" onclick="switchLayer(0)" id="btn-layer-0">Térreo (L0)</button>
-                    <button class="layer-btn" onclick="switchLayer(1)" id="btn-layer-1">Superior (L1)</button>
-                </div>
-            </section>
-
-            <!-- Ferramentas do Mestre -->
-            <section class="mestre-only space-y-4">
-                <h3 class="text-[10px] font-bold text-slate-500 uppercase">Controles Ativos</h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="document.getElementById('f-map').click()" class="bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">🖼️ Mapa</button>
-                    <button onclick="document.getElementById('f-token').click()" class="bg-slate-800/50 border border-slate-700 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all">🧙 Token</button>
-                </div>
-                
-                <!-- Grade Híbrida -->
-                <div class="bg-black/20 p-3 rounded-xl border border-white/5 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-bold text-slate-500 uppercase">Grade</span>
-                        <select id="grid-type-sel" onchange="changeGridType(this.value)" class="bg-slate-800 text-[10px] text-white border border-slate-700 rounded px-1 outline-none">
-                            <option value="square">Quadrada</option>
-                            <option value="hexFlat">Hex (Plano)</option>
-                            <option value="hexPointy">Hex (Ponta)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-[9px] text-slate-400 mb-1">Tamanho: <span id="grid-txt">60px</span></div>
-                        <input type="range" id="grid-range" min="30" max="150" value="60" class="w-full h-1 bg-slate-800 rounded-lg">
-                    </div>
-                </div>
-            </section>
-
-            <!-- Parser de Rolagem -->
-            <section class="space-y-3">
-                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rolagem Avançada</h3>
-                <div class="flex gap-2">
-                    <input type="text" id="dice-input" placeholder="Ex: 2d20kh1 + 5" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500">
-                    <button onclick="executeRoll()" class="bg-indigo-600 hover:bg-indigo-500 px-3 rounded-lg text-xs font-bold">Rolar</button>
-                </div>
-                <div id="dice-history" class="bg-black/20 rounded-xl p-3 h-24 overflow-y-auto space-y-2 border border-white/5 flex flex-col-reverse text-[10px]"></div>
-            </section>
-        </div>
-
-        <input type="file" id="f-map" class="hidden" accept="image/*">
-        <input type="file" id="f-token" class="hidden" accept="image/*">
+<!-- ══ FLOATING CHARACTER SHEET ══ -->
+<div class="floating-window" id="char-sheet">
+    <div class="fw-header" id="char-sheet-header">
+        <span class="text-[11px] font-bold text-white uppercase tracking-widest" id="sheet-title">Ficha de Atributos</span>
+        <button onclick="closeSheet()" class="text-slate-400 hover:text-white" aria-label="Fechar">✕</button>
     </div>
-
-    <!-- Painel Flutuante Ficha (Mockup Interativo) -->
-    <div class="floating-panel" id="char-sheet">
-        <div class="fp-header" id="char-sheet-header">
-            <span class="text-[11px] font-bold text-white uppercase tracking-widest" id="sheet-title">Ficha do Personagem</span>
-            <button onclick="toggleSheet()" class="text-slate-400 hover:text-white">✕</button>
-        </div>
-        <div class="p-4 space-y-3">
-            <div class="flex gap-4">
-                <div class="w-16 h-16 bg-slate-800 rounded-lg bg-cover bg-center" id="sheet-avatar"></div>
-                <div class="flex-1 space-y-2">
-                    <div>
-                        <label class="text-[9px] text-slate-500 uppercase">HP</label>
-                        <input type="text" id="sheet-hp" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-white" value="45/50">
-                    </div>
-                    <div>
-                        <label class="text-[9px] text-slate-500 uppercase">MP</label>
-                        <input type="text" id="sheet-mp" class="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs text-white" value="12/20">
-                    </div>
-                </div>
-            </div>
-            <button onclick="saveSheet()" class="w-full bg-slate-800 hover:bg-indigo-600 py-2 rounded-lg text-[10px] font-bold transition-all">Atualizar Token</button>
-        </div>
-    </div>
-
-    <!-- Canvas Framework -->
-    <div id="viewport">
-        <div id="map-container">
-            <img id="active-map" alt="">
-            <canvas id="grid-canvas"></canvas>
-            <div id="tokens-layer"></div>
-        </div>
-    </div>
-
-    <script type="module">
-        /* ===================================================================
-           1. CORE STATE & INITIALIZATION
-           =================================================================== */
-        const state = { 
-            role: 'jogador', uid: null, name: 'Anónimo',
-            zoom: 1, pan: { x: 50, y: 50 }, 
-            gridSize: 60, gridType: 'square', // 'square', 'hexFlat', 'hexPointy'
-            currentLayer: 0, // Z-Index Multinível
-            tokens: {},
-            activeSheetId: null
-        };
-
-        const viewport = document.getElementById('viewport');
-        const container = document.getElementById('map-container');
-        const mapImg = document.getElementById('active-map');
-        const gridCanvas = document.getElementById('grid-canvas');
-        const gridCtx = gridCanvas.getContext('2d');
-
-        window.startVTT = async (role) => {
-            const { auth, signInAnonymously } = window.vtt;
-            state.role = role;
-            state.name = document.getElementById('user-name').value.trim() || (role === 'mestre' ? 'Mestre' : 'Jogador');
-            if(role === 'mestre') document.body.classList.add('is-mestre');
-            
-            try {
-                const cred = await signInAnonymously(auth);
-                state.uid = cred.user.uid;
-                document.getElementById('setup-modal').style.display = 'none';
-                document.getElementById('sync-dot').classList.replace('bg-red-500', 'bg-green-500');
-                
-                await initSync();
-                // Inicializa WebRTC para P2P de Baixa Latência
-                WebRTCManager.init(state.uid, role);
-            } catch (err) { console.error("Falha ao entrar:", err); }
-        };
-
-        async function initSync() {
-            const { db, appId, onSnapshot, doc, getDoc, setDoc, collection } = window.vtt;
-            const worldDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current');
-
-            const snapInitial = await getDoc(worldDocRef);
-            if (!snapInitial.exists()) {
-                await setDoc(worldDocRef, { grid: 60, gridType: 'square', mapUrl: "", currentLayer: 0 });
-            }
-            
-            // Sync Estado do Mundo
-            onSnapshot(worldDocRef, (snap) => {
-                if (snap.exists()) {
-                    const data = snap.data();
-                    state.gridSize = data.grid || 60;
-                    state.gridType = data.gridType || 'square';
-                    
-                    // Mestre controla a camada global, ou jogadores seguem a do mestre? 
-                    // Assumimos que o Mestre muda a Layer global.
-                    if(data.currentLayer !== undefined) {
-                        state.currentLayer = data.currentLayer;
-                        document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
-                        document.getElementById('btn-layer-'+state.currentLayer)?.classList.add('active');
-                    }
-
-                    if (data.mapUrl && mapImg.src !== data.mapUrl) {
-                        mapImg.src = data.mapUrl;
-                        mapImg.onload = () => {
-                            container.style.width = mapImg.width + "px";
-                            container.style.height = mapImg.height + "px";
-                            gridCanvas.width = mapImg.width;
-                            gridCanvas.height = mapImg.height;
-                            renderSystem();
-                        };
-                    } else {
-                        renderSystem();
-                    }
-                }
-            });
-
-            // Sync Tokens Persistentes
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), (snap) => {
-                snap.docChanges().forEach(change => {
-                    const id = change.doc.id;
-                    const data = change.doc.data();
-                    if (change.type === "removed") {
-                        document.getElementById(id)?.remove();
-                        delete state.tokens[id];
-                    } else {
-                        state.tokens[id] = data;
-                        updateTokenDOM(id, data);
-                    }
-                });
-            });
-        }
-
-        /* ===================================================================
-           2. HYBRID GRID SYSTEM (SQUARE & HEXAGONAL) - MATH & CANVAS API
-           =================================================================== */
-        
-        function renderSystem() {
-            // Atualiza Transformação do Viewport
-            container.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.zoom})`;
-            document.getElementById('grid-txt').innerText = state.gridSize + "px";
-            
-            // Desenha Grade via Canvas
-            drawGrid();
-            
-            // Atualiza Visibilidade/Tamanho dos Tokens baseado na Layer
-            Object.keys(state.tokens).forEach(id => {
-                updateTokenDOM(id, state.tokens[id]);
-            });
-        }
-
-        function drawGrid() {
-            gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-            gridCtx.strokeStyle = 'rgba(0,0,0,0.4)';
-            gridCtx.lineWidth = 1;
-            gridCtx.beginPath();
-
-            const size = state.gridSize;
-            const w = gridCanvas.width;
-            const h = gridCanvas.height;
-
-            if (state.gridType === 'square') {
-                for (let x = 0; x <= w; x += size) { gridCtx.moveTo(x, 0); gridCtx.lineTo(x, h); }
-                for (let y = 0; y <= h; y += size) { gridCtx.moveTo(0, y); gridCtx.lineTo(w, y); }
-            } else if (state.gridType === 'hexFlat' || state.gridType === 'hexPointy') {
-                // Matemática de Hexágonos: r = size (raio exterior)
-                // A distância entre o centro de hexágonos adjacentes varia conforme o tipo.
-                const hexR = size / Math.sqrt(3); // Ajuste de proporção para alinhar com o slider
-                const hexW = state.gridType === 'hexFlat' ? hexR * 2 : hexR * Math.sqrt(3);
-                const hexH = state.gridType === 'hexPointy' ? hexR * 2 : hexR * Math.sqrt(3);
-                const xOffset = state.gridType === 'hexFlat' ? hexR * 1.5 : hexW;
-                const yOffset = state.gridType === 'hexPointy' ? hexR * 1.5 : hexH;
-
-                for (let q = 0; q * xOffset < w + size; q++) {
-                    for (let r = 0; r * yOffset < h + size; r++) {
-                        let cx = q * xOffset;
-                        let cy = r * yOffset;
-                        // Deslocamento de fileiras (Parity)
-                        if (state.gridType === 'hexFlat' && q % 2 !== 0) cy += hexH / 2;
-                        if (state.gridType === 'hexPointy' && r % 2 !== 0) cx += hexW / 2;
-
-                        drawSingleHex(cx, cy, hexR, state.gridType === 'hexPointy');
-                    }
-                }
-            }
-            gridCtx.stroke();
-        }
-
-        function drawSingleHex(x, y, radius, isPointy) {
-            for (let i = 0; i < 6; i++) {
-                const angle_deg = isPointy ? 60 * i - 30 : 60 * i;
-                const angle_rad = Math.PI / 180 * angle_deg;
-                const px = x + radius * Math.cos(angle_rad);
-                const py = y + radius * Math.sin(angle_rad);
-                if (i === 0) gridCtx.moveTo(px, py);
-                else gridCtx.lineTo(px, py);
-            }
-            gridCtx.closePath();
-        }
-
-        // SNAPPING ALGORITHM
-        function snapToGrid(pixelX, pixelY) {
-            const s = state.gridSize;
-            if (state.gridType === 'square') {
-                return {
-                    x: Math.floor(pixelX / s) * s,
-                    y: Math.floor(pixelY / s) * s
-                };
-            } else {
-                // Matemática de aproximação Cúbica/Axial para Hexágonos
-                // Para VTTs em JS, o mais rápido computacionalmente é checar o centro mais próximo
-                // Devido à limitação de espaço, usaremos uma aproximação de offset parity (even-q/odd-r)
-                const hexR = s / Math.sqrt(3);
-                const isPointy = state.gridType === 'hexPointy';
-                
-                const w = isPointy ? hexR * Math.sqrt(3) : hexR * 2;
-                const h = isPointy ? hexR * 2 : hexR * Math.sqrt(3);
-                const xOff = isPointy ? w : hexR * 1.5;
-                const yOff = isPointy ? hexR * 1.5 : h;
-
-                // Estimar coluna e linha (aprox)
-                let q = Math.round(pixelX / xOff);
-                let r = Math.round(pixelY / yOff);
-                
-                // Refinar com Parity real
-                let cx = q * xOff;
-                let cy = r * yOff;
-                if (!isPointy && q % 2 !== 0) cy += h / 2;
-                if (isPointy && r % 2 !== 0) cx += w / 2;
-
-                // Retorna top-left pseudo bound-box para o DOM element
-                return { x: cx - s/2, y: cy - s/2 }; 
-            }
-        }
-
-        /* ===================================================================
-           3. TOKENS: RESOURCES BARS & Z-INDEX LAYERS
-           =================================================================== */
-        
-        function updateTokenDOM(id, data) {
-            let el = document.getElementById(id);
-            if (!el) {
-                el = document.createElement('div');
-                el.id = id; el.className = 'token';
-                
-                // Barras
-                const bars = document.createElement('div');
-                bars.className = 'token-bars';
-                bars.innerHTML = `
-                    <div class="res-bar"><div class="res-fill hp" id="hp-${id}" style="width:100%"></div></div>
-                    <div class="res-bar"><div class="res-fill mp" id="mp-${id}" style="width:100%"></div></div>
-                `;
-                el.appendChild(bars);
-
-                // Status Container
-                const status = document.createElement('div');
-                status.className = 'status-container';
-                status.id = `status-${id}`;
-                el.appendChild(status);
-
-                el.style.backgroundImage = `url(${data.url})`;
-                
-                // Menu Contextual Mockup p/ abrir Ficha
-                el.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    if(state.role==='mestre') openCharacterSheet(id, data);
-                });
-
-                attachTokenDrag(el, id);
-                document.getElementById('tokens-layer').appendChild(el);
-            }
-
-            // Layer Management (Multinível)
-            const tokenLayer = data.zLayer || 0;
-            if(tokenLayer === state.currentLayer) {
-                el.classList.remove('hidden-layer');
-            } else {
-                el.classList.add('hidden-layer');
-            }
-
-            // Update UI Bars (Parser basic format: "hp/max")
-            if(data.hp) {
-                const [cur, max] = String(data.hp).split('/').map(Number);
-                if(max) document.getElementById(`hp-${id}`).style.width = `${(cur/max)*100}%`;
-            }
-            if(data.mp) {
-                const [cur, max] = String(data.mp).split('/').map(Number);
-                if(max) document.getElementById(`mp-${id}`).style.width = `${(cur/max)*100}%`;
-            }
-
-            const size = state.gridSize - 4; 
-            el.style.width = el.style.height = `${size}px`;
-            el.style.left = `${data.x + 2}px`; 
-            el.style.top = `${data.y + 2}px`;
-        }
-
-        /* ===================================================================
-           4. WEBRTC HYBRID PROTOCOL (ZERO LATENCY DRAG)
-           =================================================================== */
-        
-        // Como o Firebase pode ter latência em moves fluidos, 
-        // usamos um mock interno do WebRTC P2P mesh via Firestore Signaling.
-        // *Nota Estrutural*: Full WebRTC Mesh leva centenas de linhas. 
-        // Vamos emular o P2P de baixa latência transmitindo o "dragging state" diretamente.
-        
-        const WebRTCManager = {
-            init: function(uid, role) {
-                this.uid = uid;
-                this.role = role;
-                // Escuta eventos P2P locais (simulados via Firebase Ephemeral para este contexto)
-                // Num ambiente Real de Produção: const pc = new RTCPeerConnection(); etc.
-                const { db, appId, onSnapshot, collection } = window.vtt;
-                onSnapshot(collection(db, 'artifacts', appId, 'public', 'webrtc_stream'), (snap) => {
-                    snap.docChanges().forEach(change => {
-                        if(change.type === 'added' || change.type === 'modified') {
-                            const d = change.doc.data();
-                            // Se alguém está a mover um token, atualiza o DOM instataneamente sem salvar DB state principal
-                            if(d.sender !== this.uid && d.type === 'drag') {
-                                const el = document.getElementById(d.tokenId);
-                                if(el) {
-                                    el.style.transition = 'none';
-                                    el.style.left = d.x + 'px';
-                                    el.style.top = d.y + 'px';
-                                }
-                            }
-                        }
-                    });
-                    document.getElementById('rtc-status').innerText = "P2P: Connected (Hybrid)";
-                    document.getElementById('rtc-status').style.color = "#4ade80";
-                });
-            },
-            streamDrag: async function(tokenId, x, y) {
-                // Num ambiente full P2P, usaríamos: dataChannel.send(JSON.stringify({tokenId, x, y}));
-                // Usamos documento temporário no Firebase para simular o canal (menos writes que o doc de Token base).
-                const { db, appId, setDoc, doc } = window.vtt;
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'webrtc_stream', tokenId), { sender: this.uid, type: 'drag', tokenId, x, y });
-            }
-        };
-
-        function attachTokenDrag(el, id) {
-            el.onmousedown = (e) => {
-                if (state.role !== 'mestre') return;
-                e.stopPropagation();
-                el.style.transition = 'none';
-                const startX = e.clientX, startY = e.clientY;
-                const initialX = el.offsetLeft, initialY = el.offsetTop;
-
-                const move = (ev) => {
-                    const nx = initialX + (ev.clientX - startX) / state.zoom;
-                    const ny = initialY + (ev.clientY - startY) / state.zoom;
-                    el.style.left = nx + "px";
-                    el.style.top = ny + "px";
-                    
-                    // WebRTC Stream Push (60hz cap na vida real, aqui livre)
-                    WebRTCManager.streamDrag(id, nx, ny);
-                };
-
-                const stop = async () => {
-                    window.removeEventListener('mousemove', move);
-                    window.removeEventListener('mouseup', stop);
-                    el.style.transition = 'left 0.1s ease-out, top 0.1s ease-out';
-                    
-                    // Lógica Dinâmica de Snapping
-                    const snapped = snapToGrid(el.offsetLeft, el.offsetTop);
-
-                    // Persistência Híbrida - Salva no DB final
-                    const { db, appId, updateDoc, doc } = window.vtt;
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { 
-                        x: snapped.x, y: snapped.y 
-                    });
-                };
-                window.addEventListener('mousemove', move);
-                window.addEventListener('mouseup', stop);
-            };
-        }
-
-        /* ===================================================================
-           5. ADVANCED DICE PARSER (AST / REGEX ENGINE)
-           =================================================================== */
-        
-        window.executeRoll = () => {
-            const input = document.getElementById('dice-input').value.trim();
-            if(!input) return;
-            
-            // Formula base suportada: NdX[khY|dlZ] +/- K
-            // R = sum(x_i d y_i) + k
-            // Expressão regular complexa
-            const regex = /^(\d+)d(\d+)(kh\d+|kl\d+|dh\d+|dl\d+)?(?:([+-])(\d+))?$/i;
-            const match = input.match(regex);
-            
-            if(!match) {
-                alert("Formato Inválido. Use: 2d20kh1+5"); return;
-            }
-
-            const numDice = parseInt(match[1]);
-            const sides = parseInt(match[2]);
-            const modifierStr = match[3]; // kh1, dl1...
-            const sign = match[4];
-            const flat = parseInt(match[5] || 0);
-
-            let rolls = [];
-            for(let i=0; i<numDice; i++) rolls.push(Math.floor(Math.random() * sides) + 1);
-            
-            // Keep / Drop Logic
-            let finalRolls = [...rolls];
-            if(modifierStr) {
-                const action = modifierStr.substring(0,2).toLowerCase(); // kh, kl, dh, dl
-                const val = parseInt(modifierStr.substring(2));
-                finalRolls.sort((a,b) => b - a); // Descendente
-                
-                if(action === 'kh') finalRolls = finalRolls.slice(0, val);
-                if(action === 'kl') finalRolls = finalRolls.slice(-val);
-                if(action === 'dl') finalRolls = finalRolls.slice(0, numDice - val);
-                if(action === 'dh') finalRolls = finalRolls.slice(val);
-            }
-
-            let total = finalRolls.reduce((a,b)=>a+b, 0);
-            if(sign === '+') total += flat;
-            if(sign === '-') total -= flat;
-
-            // Render Output
-            const history = document.getElementById('dice-history');
-            const entry = document.createElement('div');
-            entry.className = "flex justify-between items-center bg-slate-800 p-2 rounded border border-slate-700";
-            entry.innerHTML = `
+    <div class="p-4 space-y-4">
+        <div class="flex gap-4">
+            <div class="w-16 h-16 bg-slate-800 border-2 border-slate-600 rounded-lg bg-cover bg-center" id="sheet-avatar"></div>
+            <div class="flex-1 space-y-2">
                 <div>
-                    <span class="text-[9px] text-slate-400 font-bold block">${state.name} — ${input}</span>
-                    <span class="text-xs text-indigo-300 font-mono">[${finalRolls.join(',')}]</span>
+                    <label class="text-[9px] text-slate-400 uppercase font-bold">Vida (HP)</label>
+                    <div class="flex items-center gap-1">
+                        <input type="number" id="sheet-hp-cur" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white text-center" placeholder="Atual">
+                        <span class="text-slate-500">/</span>
+                        <input type="number" id="sheet-hp-max" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white text-center" placeholder="Máx">
+                    </div>
                 </div>
-                <span class="text-sm font-black text-emerald-400">${total}</span>
+                <div>
+                    <label class="text-[9px] text-slate-400 uppercase font-bold">Mana/Energia (MP)</label>
+                    <div class="flex items-center gap-1">
+                        <input type="number" id="sheet-mp-cur" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white text-center" placeholder="Atual">
+                        <span class="text-slate-500">/</span>
+                        <input type="number" id="sheet-mp-max" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-xs text-white text-center" placeholder="Máx">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div>
+            <label class="text-[9px] text-slate-400 uppercase font-bold block mb-1">Status Ativos</label>
+            <div class="flex gap-2">
+                <button onclick="toggleStatus('🔥')" class="p-1.5 bg-slate-800 rounded border border-slate-700 hover:border-red-500">🔥</button>
+                <button onclick="toggleStatus('☠️')" class="p-1.5 bg-slate-800 rounded border border-slate-700 hover:border-green-500">☠️</button>
+                <button onclick="toggleStatus('🛡️')" class="p-1.5 bg-slate-800 rounded border border-slate-700 hover:border-blue-500">🛡️</button>
+                <button onclick="toggleStatus('👁️')" class="p-1.5 bg-slate-800 rounded border border-slate-700 hover:border-purple-500">👁️</button>
+            </div>
+        </div>
+        <button onclick="saveSheet()" class="w-full bg-indigo-600 hover:bg-indigo-500 py-2 rounded-lg text-[11px] font-bold text-white transition-all shadow">Salvar Alterações</button>
+    </div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Tabletop Pro</h2>
+            <div class="flex gap-2 items-center mt-0.5">
+                <p id="role-label" class="text-[9px] text-slate-500 font-mono">Conectando...</p>
+                <span id="webrtc-indicator" class="text-[8px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400">P2P: Off</span>
+            </div>
+        </div>
+        <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto space-y-4 pr-1">
+
+        <!-- Scene Layers (Z-Index) -->
+        <section class="mestre-only">
+            <div class="flex justify-between items-center mb-1">
+                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Camada Visível (Scene)</span>
+            </div>
+            <div class="layer-toggle">
+                <div class="layer-btn active" id="btn-layer-0" onclick="setGlobalLayer(0)">Térreo (L0)</div>
+                <div class="layer-btn" id="btn-layer-1" onclick="setGlobalLayer(1)">Subsolo/Alto (L1)</div>
+            </div>
+        </section>
+
+        <!-- Ferramentas Mestre -->
+        <section class="mestre-only space-y-3">
+            <div>
+                <div class="tool-bar">
+                    <button class="tool-btn active" id="tool-move" onclick="setMode('move')">🖐 Mover</button>
+                    <button class="tool-btn" id="tool-fog-paint" onclick="setMode('fog-paint')">🌫️ Névoa</button>
+                    <button class="tool-btn" id="tool-fog-erase" onclick="setMode('fog-erase')">👁️ Revelar</button>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <button onclick="document.getElementById('f-map').click()" class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2 rounded-xl text-[11px] font-bold hover:bg-indigo-600 hover:text-white transition-all">🗺️ Upload Mapa Otimizado</button>
+                <button onclick="document.getElementById('f-token').click()" class="w-full bg-slate-800/50 border border-slate-700 py-2 rounded-xl text-[11px] font-bold text-slate-300 hover:bg-slate-700 transition-all">🧙 Criar Token</button>
+                <button onclick="syncCamera()" class="w-full bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 py-2 rounded-xl text-[11px] font-bold hover:bg-emerald-600 hover:text-white transition-all">📡 Sincronizar Câmeras</button>
+            </div>
+
+            <p class="text-[8px] text-slate-600 text-center">Ctrl+Clique = Ping &nbsp;|&nbsp; Shift+Drag = Régua</p>
+
+            <!-- Sistema de Grade Híbrida -->
+            <div class="bg-black/20 p-3 rounded-xl border border-white/5 space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-[9px] font-bold text-slate-500 uppercase">Grade</span>
+                    <select id="grid-type-sel" onchange="changeGridType(this.value)" class="bg-slate-800 text-[9px] text-white border border-slate-700 rounded px-1 outline-none">
+                        <option value="square">Quadrada</option>
+                        <option value="hexFlat">Hexágono (Plano)</option>
+                        <option value="hexPointy">Hexágono (Ponta)</option>
+                    </select>
+                </div>
+                <div>
+                    <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase">Tamanho: <span id="grid-txt" class="text-indigo-400">60px</span></div>
+                    <input type="range" id="grid-range" min="30" max="150" value="60" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div>
+                    <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase">Opacidade: <span id="opacity-txt" class="text-indigo-400">20%</span></div>
+                    <input type="range" id="opacity-range" min="0" max="100" value="20" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+        </section>
+
+        <!-- Iniciativa e Presença -->
+        <section class="space-y-2">
+            <div class="flex items-center justify-between">
+                <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">⚡ Combate</h3>
+                <div class="flex gap-1">
+                    <button onclick="nextTurn()" class="text-[9px] font-bold px-2 py-1 rounded-lg bg-indigo-600/20 text-indigo-400">▶ Turno</button>
+                </div>
+            </div>
+            <div id="initiative-list" class="space-y-1 min-h-[30px] bg-black/20 rounded p-1">
+                <p class="text-[9px] text-slate-600 text-center">Iniciativa Vazia.</p>
+            </div>
+        </section>
+
+        <!-- Parser AST de Dados -->
+        <section class="space-y-2">
+            <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">🎲 Motor de Rolagem</h3>
+            <div class="flex gap-2">
+                <input type="text" id="dice-parser-input" placeholder="Ex: 2d20kh1 + 5" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px] text-white outline-none focus:border-indigo-500">
+                <button onclick="executeAdvancedRoll()" class="bg-indigo-600 hover:bg-indigo-500 px-3 rounded-lg text-[10px] font-bold">Rolar</button>
+            </div>
+            <!-- Quick Dices -->
+            <div class="grid grid-cols-4 gap-1.5 mt-1">
+                <button onclick="quickRoll(20)" class="dice-btn py-1.5 rounded-lg text-[10px] font-black">d20</button>
+                <button onclick="quickRoll(12)" class="dice-btn py-1.5 rounded-lg text-[10px] font-black">d12</button>
+                <button onclick="quickRoll(8)"  class="dice-btn py-1.5 rounded-lg text-[10px] font-black">d8</button>
+                <button onclick="quickRoll(6)"  class="dice-btn py-1.5 rounded-lg text-[10px] font-black">d6</button>
+            </div>
+            <div id="dice-history" class="bg-black/20 rounded-xl p-2 h-32 overflow-y-auto space-y-1 border border-white/5 flex flex-col-reverse"></div>
+        </section>
+        
+        <!-- Lista de Jogadores -->
+        <section>
+            <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">🟢 Online</h3>
+            <div id="presence-list" class="flex flex-wrap gap-1"></div>
+        </section>
+
+    </div>
+    
+    <!-- Uploaders Ocultos -->
+    <input type="file" id="f-map" class="hidden" accept="image/*">
+    <input type="file" id="f-token" class="hidden" accept="image/*">
+</div>
+
+<!-- ══ VIEWPORT CANVAS ══ -->
+<div id="viewport">
+    <div id="map-container">
+        <img id="active-map" alt="">
+        <canvas id="grid-canvas" class="canvas-layer"></canvas>
+        <div id="tokens-layer"></div>
+        <canvas id="fog-canvas" class="canvas-layer"></canvas>
+        <canvas id="ruler-canvas" class="canvas-layer"></canvas>
+    </div>
+</div>
+
+<script type="module">
+    /* ===================================================================
+       1. CORE STATE & FIREBASE INIT
+       =================================================================== */
+    const state = {
+        role: 'jogador',
+        playerName: 'Jogador',
+        peerId: null,
+        peers: new Set(),
+        zoom: 1, pan: { x: 100, y: 100 },
+        gridSize: 60, opacity: 0.2, gridType: 'square',
+        mapWidth: 1200, mapHeight: 800,
+        currentLayer: 0,
+        fogCells: new Set(),
+        mode: 'move',
+        initiative: [], initiativeTurn: 0,
+        ruler: null,
+        isFogPainting: false, isRulerActive: false
+    };
+
+    const viewport    = document.getElementById('viewport');
+    const container   = document.getElementById('map-container');
+    const mapImg      = document.getElementById('active-map');
+    const gridCanvas  = document.getElementById('grid-canvas');
+    const fogCanvas   = document.getElementById('fog-canvas');
+    const rulerCanvas = document.getElementById('ruler-canvas');
+    const gridCtx     = gridCanvas.getContext('2d');
+    const fogCtx      = fogCanvas.getContext('2d', { willReadFrequently: true });
+    const rulerCtx    = rulerCanvas.getContext('2d');
+    
+    const ctxMenu     = document.getElementById('ctx-menu');
+    let ctxTokenId    = null;
+    const tokenDataMap = {}; 
+
+    function _el(id) { return document.getElementById(id); }
+
+    // Login e Preparação
+    window.confirmName = () => {
+        const nameInput = _el('setup-name-input');
+        if (!nameInput.value.trim()) return nameInput.focus();
+        state.playerName = nameInput.value.trim();
+        _el('setup-step-name').style.display = 'none';
+        _el('setup-step-role').style.display = 'block';
+        _el('setup-name-greeting').innerText = 'Olá, ' + state.playerName + '! Como deseja entrar?';
+    };
+
+    window.startVTT = async (role) => {
+        const { auth, signInAnonymously } = window.vtt;
+        state.role = role;
+        if (role === 'mestre') document.body.classList.add('is-mestre');
+        _el('role-label').innerText = state.playerName + ' (' + (role === 'mestre' ? 'Mestre' : 'Jogador') + ')';
+        _el('auth-log').innerText = 'Conectando ao Firebase...';
+        
+        try {
+            await signInAnonymously(auth);
+            _el('setup-modal').style.display = 'none';
+            _el('sync-dot').classList.replace('bg-red-500', 'bg-green-500');
+            
+            // Inicia P2P e depois Database Sync
+            WebRTCManager.init();
+            initSync();
+            initPresence();
+        } catch (err) {
+            _el('auth-log').innerText = 'Erro: ' + err.message;
+        }
+    };
+
+    /* ===================================================================
+       2. WEBRTC HYBRID MANAGER (PEERJS / FIRESTORE SIGNALING)
+       =================================================================== */
+    // Implementa Data Channels via PeerJS para arraste de token sem delay.
+    const WebRTCManager = {
+        peer: null,
+        connections: {},
+        
+        init: function() {
+            // Inicializa PeerJS com servidor publico
+            this.peer = new Peer();
+            
+            this.peer.on('open', (id) => {
+                state.peerId = id;
+                _el('webrtc-indicator').innerText = "P2P: Ready";
+                _el('webrtc-indicator').style.color = "#4ade80";
+            });
+
+            // Ao receber conexão de outro jogador
+            this.peer.on('connection', (conn) => {
+                conn.on('data', (data) => this.handleData(data));
+            });
+            
+            this.peer.on('error', (err) => {
+                console.warn("[WebRTC] Fallback para Sync Nativo.", err);
+                _el('webrtc-indicator').innerText = "P2P: Error";
+                _el('webrtc-indicator').style.color = "#ef4444";
+            });
+        },
+        
+        connectToPeer: function(peerId) {
+            if(!this.peer || !peerId || peerId === state.peerId || this.connections[peerId]) return;
+            const conn = this.peer.connect(peerId);
+            conn.on('open', () => { this.connections[peerId] = conn; });
+            conn.on('data', (data) => this.handleData(data));
+            conn.on('close', () => { delete this.connections[peerId]; });
+        },
+
+        broadcastDrag: function(tokenId, x, y) {
+            const payload = { type: 'drag', tokenId, x, y };
+            Object.values(this.connections).forEach(conn => {
+                if(conn.open) conn.send(payload);
+            });
+        },
+
+        handleData: function(data) {
+            if(data.type === 'drag') {
+                const tw = _el('tw-' + data.tokenId);
+                if(tw) {
+                    tw.style.transition = 'none';
+                    tw.style.left = data.x + 'px';
+                    tw.style.top = data.y + 'px';
+                }
+            }
+        }
+    };
+
+    /* ===================================================================
+       3. FIRESTORE SYNC & WORLD STATE
+       =================================================================== */
+    async function initSync() {
+        const { db, appId, onSnapshot, doc, setDoc, getDoc, collection } = window.vtt;
+        const worldRef = doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current');
+
+        const existingSnap = await getDoc(worldRef);
+        if (!existingSnap.exists()) {
+            await setDoc(worldRef, {
+                grid: 60, gridType: 'square', opacity: 0.2, mapUrl: '',
+                mapWidth: 1200, mapHeight: 800, currentLayer: 0,
+                camera: { zoom: 1, pan: { x: 100, y: 100 } },
+                fog: [], initiative: [], initiativeTurn: 0, ping: null
+            });
+        }
+
+        onSnapshot(worldRef, (snap) => {
+            if (!snap.exists()) return;
+            const d = snap.data();
+
+            state.gridSize = d.grid ?? 60;
+            state.gridType = d.gridType ?? 'square';
+            state.opacity  = d.opacity ?? 0.2;
+            state.mapWidth = d.mapWidth ?? 1200;
+            state.mapHeight = d.mapHeight ?? 800;
+            
+            // Sync Scene Layer (Mestre altera pra todos visualizarem a cena correspondente)
+            if (d.currentLayer !== undefined && state.currentLayer !== d.currentLayer) {
+                state.currentLayer = d.currentLayer;
+                document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+                _el('btn-layer-'+state.currentLayer)?.classList.add('active');
+                // Força re-render de tokens
+                Object.values(tokenDataMap).forEach(t => updateTokenDOM(t.id, t.raw));
+            }
+
+            if (state.role === 'jogador' && d.camera) {
+                state.zoom = d.camera.zoom;
+                state.pan  = { ...d.camera.pan };
+            }
+
+            if (d.mapUrl) {
+                if (mapImg.getAttribute('data-src') !== d.mapUrl) {
+                    mapImg.setAttribute('data-src', d.mapUrl);
+                    mapImg.src = d.mapUrl;
+                    mapImg.style.display = 'block';
+                }
+            }
+
+            state.fogCells = new Set(d.fog ?? []);
+            state.initiative = d.initiative ?? [];
+            state.initiativeTurn = d.initiativeTurn ?? 0;
+            renderInitiative();
+
+            if (d.ping && (Date.now() - d.ping.ts) < 4000) showPing(d.ping.x, d.ping.y);
+
+            renderSystem();
+        });
+
+        // Tokens
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), (snap) => {
+            snap.docChanges().forEach(change => {
+                if (change.type === 'removed') {
+                    _el('tw-' + change.doc.id)?.remove();
+                    delete tokenDataMap[change.doc.id];
+                } else {
+                    updateTokenDOM(change.doc.id, change.doc.data());
+                }
+            });
+        });
+
+        // Dados
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'dice-rolls'), (snap) => {
+            const entries = [];
+            snap.forEach(d => entries.push({ id: d.id, ...d.data() }));
+            entries.sort((a, b) => b.ts - a.ts);
+            renderDiceHistory(entries.slice(0, 20));
+        });
+    }
+
+    async function initPresence() {
+        const { db, appId, doc, setDoc, deleteDoc, onSnapshot, collection, auth } = window.vtt;
+        const uid = auth.currentUser.uid;
+        const presenceRef = doc(db, 'artifacts', appId, 'public', 'data', 'presence', uid);
+
+        const updatePresence = () => {
+            setDoc(presenceRef, {
+                uid, name: state.playerName, role: state.role, 
+                peerId: state.peerId, ts: Date.now(), online: true
+            }, {merge: true}).catch(()=>{});
+        };
+
+        updatePresence(); // Initial
+        // Heartbeat
+        const hb = setInterval(updatePresence, 15000);
+        window.addEventListener('beforeunload', () => { clearInterval(hb); deleteDoc(presenceRef).catch(()=>{}); });
+
+        onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'presence'), (snap) => {
+            const list = _el('presence-list');
+            list.innerHTML = '';
+            snap.forEach(d => {
+                const u = d.data();
+                if (u.online && (Date.now() - u.ts) < 45000) {
+                    // Liga P2P se houver PeerID
+                    if(u.peerId) WebRTCManager.connectToPeer(u.peerId);
+                    
+                    const badge = document.createElement('div');
+                    badge.className = `text-[9px] px-1.5 py-0.5 rounded ${u.role==='mestre'?'bg-indigo-600/30 text-indigo-300 border border-indigo-500/50':'bg-slate-700 text-slate-300'}`;
+                    badge.innerText = u.name;
+                    list.appendChild(badge);
+                }
+            });
+        });
+    }
+
+    /* ===================================================================
+       4. HYBRID GRID & CANVAS MATH
+       =================================================================== */
+    function mapCoords(cx, cy) {
+        const r = container.getBoundingClientRect();
+        return { x: (cx - r.left) / state.zoom, y: (cy - r.top) / state.zoom };
+    }
+
+    function renderSystem() {
+        container.style.width     = state.mapWidth  + 'px';
+        container.style.height    = state.mapHeight + 'px';
+        container.style.transform = `translate(${state.pan.x}px,${state.pan.y}px) scale(${state.zoom})`;
+
+        if (gridCanvas.width !== state.mapWidth || gridCanvas.height !== state.mapHeight) {
+            gridCanvas.width  = fogCanvas.width  = rulerCanvas.width  = state.mapWidth;
+            gridCanvas.height = fogCanvas.height = rulerCanvas.height = state.mapHeight;
+        }
+
+        drawGrid();
+        renderFog();
+        renderRuler();
+        
+        _el('grid-txt').innerText = state.gridSize + 'px';
+        _el('opacity-txt').innerText = Math.round(state.opacity * 100) + '%';
+        if(_el('opacity-range')) _el('opacity-range').value = state.opacity * 100;
+        if(_el('grid-range')) _el('grid-range').value = state.gridSize;
+    }
+
+    function drawGrid() {
+        gridCtx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+        gridCtx.strokeStyle = `rgba(0,0,0,${state.opacity})`;
+        gridCtx.lineWidth = 1.5;
+        gridCtx.beginPath();
+
+        const s = state.gridSize;
+        const w = gridCanvas.width;
+        const h = gridCanvas.height;
+
+        if (state.gridType === 'square') {
+            for (let x = 0; x <= w; x += s) { gridCtx.moveTo(x, 0); gridCtx.lineTo(x, h); }
+            for (let y = 0; y <= h; y += s) { gridCtx.moveTo(0, y); gridCtx.lineTo(w, y); }
+        } else {
+            // Hexagon Math (Axial offset approx for drawing)
+            const isPointy = state.gridType === 'hexPointy';
+            const hexR = s / Math.sqrt(3);
+            const hexW = isPointy ? hexR * Math.sqrt(3) : hexR * 2;
+            const hexH = isPointy ? hexR * 2 : hexR * Math.sqrt(3);
+            const xOff = isPointy ? hexW : hexR * 1.5;
+            const yOff = isPointy ? hexR * 1.5 : hexH;
+
+            for (let q = 0; q * xOff < w + s; q++) {
+                for (let r = 0; r * yOffset < h + s; r++) {
+                    let cx = q * xOffset;
+                    let cy = r * yOffset;
+                    if (!isPointy && q % 2 !== 0) cy += hexH / 2;
+                    if (isPointy && r % 2 !== 0) cx += hexW / 2;
+                    
+                    for (let i = 0; i < 6; i++) {
+                        const a = (isPointy ? 60 * i - 30 : 60 * i) * Math.PI / 180;
+                        const px = cx + hexR * Math.cos(a);
+                        const py = cy + hexR * Math.sin(a);
+                        if (i === 0) gridCtx.moveTo(px, py);
+                        else gridCtx.lineTo(px, py);
+                    }
+                    gridCtx.closePath();
+                }
+            }
+        }
+        gridCtx.stroke();
+    }
+
+    function snapToGrid(pixelX, pixelY) {
+        const s = state.gridSize;
+        if (state.gridType === 'square') {
+            return { x: Math.floor(pixelX / s) * s, y: Math.floor(pixelY / s) * s };
+        } else {
+            // Hex Center Snapping Approx (Even-q/Odd-r parity logic)
+            const isPointy = state.gridType === 'hexPointy';
+            const hexR = s / Math.sqrt(3);
+            const w = isPointy ? hexR * Math.sqrt(3) : hexR * 2;
+            const h = isPointy ? hexR * 2 : hexR * Math.sqrt(3);
+            const xOff = isPointy ? w : hexR * 1.5;
+            const yOff = isPointy ? hexR * 1.5 : h;
+
+            let q = Math.round(pixelX / xOff);
+            let r = Math.round(pixelY / yOff);
+            
+            let cx = q * xOff;
+            let cy = r * yOff;
+            if (!isPointy && q % 2 !== 0) cy += h / 2;
+            if (isPointy && r % 2 !== 0) cx += w / 2;
+
+            // Retorna o Top-Left do Bounding Box do token para bater com o DOM
+            return { x: cx - s/2, y: cy - s/2 };
+        }
+    }
+
+    window.changeGridType = async (type) => {
+        const { db, appId, updateDoc, doc } = window.vtt;
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { gridType: type });
+    };
+
+    window.setGlobalLayer = async (l) => {
+        const { db, appId, updateDoc, doc } = window.vtt;
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { currentLayer: l });
+    };
+
+    /* ===================================================================
+       5. TOKENS, SCENE LAYERS & BARS
+       =================================================================== */
+    function updateTokenDOM(id, data) {
+        const wrapperId = 'tw-' + id;
+        let wrapper = _el(wrapperId);
+        let el;
+
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.id = wrapperId; wrapper.className = 'token-wrapper';
+
+            el = document.createElement('div');
+            el.id = id; el.className = 'token';
+            el.style.backgroundImage = `url(${data.url})`;
+
+            // UI 2025: Resource Bars & Status
+            const bars = document.createElement('div'); bars.className = 'token-bars';
+            bars.innerHTML = `
+                <div class="res-bar"><div class="res-fill hp" id="hp-fill-${id}" style="width:100%"></div></div>
+                <div class="res-bar"><div class="res-fill mp" id="mp-fill-${id}" style="width:100%"></div></div>
             `;
-            history.appendChild(entry);
-        };
-        // Simple Roll Adapter for Sidebar Buttons
-        window.roll = (s) => {
-            document.getElementById('dice-input').value = `1d${s}`;
-            window.executeRoll();
+            el.appendChild(bars);
+
+            const nameEl = document.createElement('div'); nameEl.className = 'token-name'; nameEl.id = 'name-' + id;
+            el.appendChild(nameEl);
+
+            const badge = document.createElement('div'); badge.className = 'token-player-badge'; badge.id = 'badge-' + id;
+            el.appendChild(badge);
+            
+            const statusBox = document.createElement('div'); statusBox.className = 'status-container'; statusBox.id = 'status-' + id;
+            el.appendChild(statusBox);
+
+            wrapper.appendChild(el);
+            attachTokenEvents(el, id);
+            _el('tokens-layer').appendChild(wrapper);
+        } else {
+            el = _el(id);
         }
 
-        /* ===================================================================
-           6. ASSET PERFORMANCE MIDDLEWARE
-           =================================================================== */
+        tokenDataMap[id] = { id, raw: data, playerControlled: !!data.playerControlled };
+
+        // Layer Visibilty
+        const tLayer = data.zLayer || 0;
+        if(tLayer === state.currentLayer) wrapper.classList.remove('layer-hidden');
+        else wrapper.classList.add('layer-hidden');
+
+        // Dimensions & Position
+        const s = state.gridSize - 4;
+        const posX = data.x + 2; const posY = data.y + 2;
+        wrapper.style.left = posX + 'px'; wrapper.style.top = posY + 'px';
+        el.style.width = el.style.height = s + 'px';
+        el.style.borderColor = data.color || '#ffffff';
+
+        // Update Bars
+        const parseBar = (valStr) => {
+            if(!valStr) return 100;
+            const p = String(valStr).split('/');
+            if(p.length===2 && Number(p[1])>0) return Math.max(0, Math.min(100, (Number(p[0])/Number(p[1]))*100));
+            return 100;
+        };
+        _el(`hp-fill-${id}`).style.width = parseBar(data.hp) + '%';
+        _el(`mp-fill-${id}`).style.width = parseBar(data.mp) + '%';
         
-        async function processImageToWebP(file) {
-            // Converte e Redimensiona imagens no Client-Side reduzindo VRAM
-            return new Promise((resolve) => {
-                const img = new Image();
-                const url = URL.createObjectURL(file);
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_RES = 4096; // Limite razoável para WebGL texture max size comum
-                    let w = img.width, h = img.height;
-                    if(w > MAX_RES) { h *= MAX_RES/w; w = MAX_RES; }
-                    
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    
-                    // Retorna Base64 comprimido em WebP (Tendência VTT atual)
-                    resolve(canvas.toDataURL('image/webp', 0.8));
-                    URL.revokeObjectURL(url);
-                };
-                img.src = url;
-            });
-        }
+        // Update Status
+        const stBox = _el(`status-${id}`);
+        stBox.innerHTML = (data.status || []).map(icon => `<div class="status-icon">${icon}</div>`).join('');
 
-        /* ===================================================================
-           7. UI EVENTS & PAN/ZOOM
-           =================================================================== */
-        
-        // Multinível (Layer Switch)
-        window.switchLayer = async (z) => {
-            const { db, appId, updateDoc, doc } = window.vtt;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { currentLayer: z });
-        };
+        const nameEl = _el('name-' + id);
+        if (data.name) { nameEl.innerText = data.name; nameEl.style.display = 'block'; }
+        else { nameEl.style.display = 'none'; }
 
-        window.changeGridType = async (type) => {
-            const { db, appId, updateDoc, doc } = window.vtt;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { gridType: type });
-        };
+        const badge = _el('badge-' + id);
+        if (badge) badge.classList.toggle('visible', !!data.playerControlled);
+        el.classList.toggle('player-can-move', !!data.playerControlled);
+    }
 
-        document.getElementById('grid-range').oninput = (e) => {
-            const { db, appId, updateDoc, doc } = window.vtt;
-            updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { grid: parseInt(e.target.value) });
-        };
+    function attachTokenEvents(el, id) {
+        el.addEventListener('mousedown', (e) => {
+            if (e.button !== 0 || state.mode !== 'move') return;
+            const isPC = tokenDataMap[id]?.playerControlled;
+            if (state.role !== 'mestre' && !isPC) return;
 
-        // Upload Handlers using Middleware
-        document.getElementById('f-map').onchange = async (e) => {
-            const file = e.target.files[0]; if(!file) return;
-            const optimizedBase64 = await processImageToWebP(file);
-            const { db, appId, updateDoc, doc } = window.vtt;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { mapUrl: optimizedBase64 });
-        };
+            e.stopPropagation();
+            const wrapper = el.parentElement;
+            wrapper.style.transition = 'none';
 
-        document.getElementById('f-token').onchange = async (e) => {
-            const file = e.target.files[0]; if(!file) return;
-            const optimizedBase64 = await processImageToWebP(file);
-            const { db, appId, addDoc, collection } = window.vtt;
-            
-            const initSnap = snapToGrid(Math.abs(state.pan.x)/state.zoom + 100, Math.abs(state.pan.y)/state.zoom + 100);
-            
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), { 
-                url: optimizedBase64, 
-                x: initSnap.x, y: initSnap.y,
-                hp: '10/10', mp: '10/10',
-                zLayer: state.currentLayer // Nasce na layer ativa
-            });
-        };
+            const sx = e.clientX, sy = e.clientY;
+            const ix = parseFloat(wrapper.style.left) || 0;
+            const iy = parseFloat(wrapper.style.top)  || 0;
 
-        // Pop-outs
-        window.openCharacterSheet = (id, data) => {
-            state.activeSheetId = id;
-            document.getElementById('char-sheet').style.display = 'block';
-            document.getElementById('sheet-avatar').style.backgroundImage = `url(${data.url})`;
-            document.getElementById('sheet-hp').value = data.hp || '';
-            document.getElementById('sheet-mp').value = data.mp || '';
-        };
-        window.toggleSheet = () => document.getElementById('char-sheet').style.display = 'none';
-        window.saveSheet = async () => {
-            if(!state.activeSheetId) return;
-            const hp = document.getElementById('sheet-hp').value;
-            const mp = document.getElementById('sheet-mp').value;
-            const { db, appId, updateDoc, doc } = window.vtt;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', state.activeSheetId), { hp, mp });
-            toggleSheet();
-        };
-
-        // Drag Floating UI
-        const fpHeader = document.getElementById('char-sheet-header');
-        fpHeader.onmousedown = (e) => {
-            const panel = document.getElementById('char-sheet');
-            let sX = e.clientX, sY = e.clientY;
-            let iX = panel.offsetLeft, iY = panel.offsetTop;
             const move = (ev) => {
-                panel.style.left = (iX + ev.clientX - sX) + 'px';
-                panel.style.top = (iY + ev.clientY - sY) + 'px';
+                const nx = ix + (ev.clientX - sx) / state.zoom;
+                const ny = iy + (ev.clientY - sy) / state.zoom;
+                wrapper.style.left = nx + 'px';
+                wrapper.style.top  = ny + 'px';
+                WebRTCManager.broadcastDrag(id, nx, ny); // P2P
             };
-            const stop = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', stop); };
-            window.addEventListener('mousemove', move); window.addEventListener('mouseup', stop);
-        }
-
-        // Pan & Zoom Map
-        viewport.onmousedown = (e) => {
-            if(e.button !== 0 || (e.target !== viewport && e.target !== mapImg && e.target !== gridCanvas)) return;
-            const startX = e.clientX - state.pan.x, startY = e.clientY - state.pan.y;
-            const move = (ev) => { 
-                state.pan.x = ev.clientX - startX; state.pan.y = ev.clientY - startY; 
-                renderSystem(); 
+            const stop = async () => {
+                window.removeEventListener('mousemove', move);
+                window.removeEventListener('mouseup', stop);
+                wrapper.style.transition = '';
+                
+                // Snap to Center/Corner based on grid math
+                const snapped = snapToGrid(parseFloat(wrapper.style.left)-2, parseFloat(wrapper.style.top)-2);
+                
+                const { db, appId, updateDoc, doc } = window.vtt;
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { x: snapped.x, y: snapped.y });
             };
             window.addEventListener('mousemove', move);
-            window.addEventListener('mouseup', () => window.removeEventListener('mousemove', move), {once:true});
-        };
+            window.addEventListener('mouseup', stop);
+        });
 
-        viewport.onwheel = (e) => {
-            if(e.target.closest('.sidebar') || e.target.closest('.floating-panel')) return;
-            e.preventDefault();
-            state.zoom = Math.min(Math.max(state.zoom + (e.deltaY > 0 ? -0.05 : 0.05), 0.1), 4);
-            renderSystem();
-        };
+        el.addEventListener('contextmenu', (e) => {
+            const isPC = tokenDataMap[id]?.playerControlled;
+            if (state.role !== 'mestre' && !isPC) return;
 
-    </script>
+            e.preventDefault(); e.stopPropagation();
+            ctxTokenId = id;
+
+            document.querySelectorAll('.ctx-gm-only').forEach(el => el.style.display = (state.role === 'mestre') ? '' : 'none');
+            
+            ctxMenu.style.display = 'block';
+            ctxMenu.style.left = e.clientX + 'px';
+            ctxMenu.style.top  = e.clientY + 'px';
+        });
+    }
+
+    /* ── Context Menu Actions ── */
+    document.addEventListener('click', (e) => { if (!e.target.closest('#ctx-menu')) ctxMenu.style.display = 'none'; });
+    
+    _el('ctx-sheet').onclick = () => {
+        const id = ctxTokenId; if(!id) return;
+        ctxMenu.style.display = 'none';
+        const data = tokenDataMap[id].raw;
+        state.activeSheetId = id;
+        
+        _el('char-sheet').style.display = 'block';
+        _el('sheet-avatar').style.backgroundImage = `url(${data.url})`;
+        
+        // Parse HP/MP strings
+        const hpP = String(data.hp||'').split('/'); _el('sheet-hp-cur').value = hpP[0]||''; _el('sheet-hp-max').value = hpP[1]||'';
+        const mpP = String(data.mp||'').split('/'); _el('sheet-mp-cur').value = mpP[0]||''; _el('sheet-mp-max').value = mpP[1]||'';
+    };
+
+    window.closeSheet = () => { _el('char-sheet').style.display = 'none'; state.activeSheetId = null; };
+    
+    window.saveSheet = async () => {
+        if(!state.activeSheetId) return;
+        const id = state.activeSheetId;
+        const hp = `${_el('sheet-hp-cur').value}/${_el('sheet-hp-max').value}`;
+        const mp = `${_el('sheet-mp-cur').value}/${_el('sheet-mp-max').value}`;
+        const { db, appId, updateDoc, doc } = window.vtt;
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { hp, mp });
+    };
+
+    window.toggleStatus = async (icon) => {
+        if(!state.activeSheetId) return;
+        const id = state.activeSheetId;
+        const data = tokenDataMap[id].raw;
+        let st = data.status || [];
+        if(st.includes(icon)) st = st.filter(i => i !== icon);
+        else st.push(icon);
+        const { db, appId, updateDoc, doc } = window.vtt;
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { status: st });
+    };
+
+    /* (Rest of standard Context Actions: Color, Delete, Control) */
+    _el('ctx-delete').onclick = async () => {
+        if(!ctxTokenId) return;
+        const { db, appId, deleteDoc, doc } = window.vtt;
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', ctxTokenId));
+        ctxMenu.style.display = 'none';
+    };
+    
+    _el('ctx-layer').onclick = async () => {
+        if(!ctxTokenId) return;
+        const data = tokenDataMap[ctxTokenId].raw;
+        const nL = data.zLayer === 1 ? 0 : 1;
+        const { db, appId, updateDoc, doc } = window.vtt;
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', ctxTokenId), { zLayer: nL });
+        ctxMenu.style.display = 'none';
+    };
+
+    const cMap = { 'ctx-color-w':'#ffffff','ctx-color-r':'#ef4444','ctx-color-g':'#22c55e' };
+    Object.keys(cMap).forEach(cid => {
+        const btn = _el(cid);
+        if(btn) btn.onclick = async () => {
+            if(!ctxTokenId) return;
+            const { db, appId, updateDoc, doc } = window.vtt;
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', ctxTokenId), { color: cMap[cid] });
+            ctxMenu.style.display = 'none';
+        };
+    });
+
+    // Draggable Sheet
+    const fpHeader = _el('char-sheet-header');
+    fpHeader.onmousedown = (e) => {
+        const panel = _el('char-sheet');
+        let sX = e.clientX, sY = e.clientY;
+        let iX = panel.offsetLeft, iY = panel.offsetTop;
+        const move = (ev) => { panel.style.left = (iX + ev.clientX - sX) + 'px'; panel.style.top = (iY + ev.clientY - sY) + 'px'; };
+        const stop = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', stop); };
+        window.addEventListener('mousemove', move); window.addEventListener('mouseup', stop);
+    };
+
+    /* ===================================================================
+       6. AST DICE PARSER & HISTORY
+       =================================================================== */
+    window.executeAdvancedRoll = async () => {
+        const input = _el('dice-parser-input').value.trim();
+        if(!input) return;
+        
+        // Regex AST Simples: 2d20kh1 + 5
+        const regex = /^(\d+)d(\d+)(kh\d+|kl\d+|dh\d+|dl\d+)?(?:([+-])(\d+))?$/i;
+        const match = input.match(regex);
+        if(!match) { alert("Formato Inválido! Use: 2d20kh1+5"); return; }
+
+        const numD = parseInt(match[1]); const sides = parseInt(match[2]);
+        const modStr = match[3]; const sign = match[4]; const flat = parseInt(match[5] || 0);
+
+        let rolls = [];
+        for(let i=0; i<numD; i++) rolls.push(Math.floor(Math.random() * sides) + 1);
+        
+        let fr = [...rolls];
+        if(modStr) {
+            const act = modStr.substring(0,2).toLowerCase(); const val = parseInt(modStr.substring(2));
+            fr.sort((a,b) => b - a); // DESC
+            if(act === 'kh') fr = fr.slice(0, val);
+            if(act === 'kl') fr = fr.slice(-val);
+        }
+
+        let total = fr.reduce((a,b)=>a+b, 0);
+        if(sign === '+') total += flat; if(sign === '-') total -= flat;
+
+        const { db, appId, addDoc, collection } = window.vtt;
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'dice-rolls'), {
+            playerName: state.playerName, formula: input, rolls: fr, total, ts: Date.now()
+        });
+    };
+
+    window.quickRoll = (s) => { _el('dice-parser-input').value = `1d${s}`; window.executeAdvancedRoll(); };
+
+    function renderDiceHistory(entries) {
+        const hist = _el('dice-history'); hist.innerHTML = '';
+        entries.forEach(d => {
+            const entry = document.createElement('div');
+            entry.className = "flex justify-between items-center bg-slate-800/80 p-2 rounded border border-slate-700";
+            entry.innerHTML = `
+                <div>
+                    <span class="text-[9px] text-slate-400 font-bold block">${d.playerName} — ${d.formula}</span>
+                    <span class="text-[10px] text-indigo-300 font-mono">[${d.rolls.join(', ')}]</span>
+                </div>
+                <span class="text-sm font-black text-emerald-400">${d.total}</span>
+            `;
+            hist.appendChild(entry);
+        });
+    }
+
+    /* ===================================================================
+       7. ASSET PIPELINE (WebP Optimizer)
+       =================================================================== */
+    async function processImageToWebP(file) {
+        return new Promise((resolve) => {
+            const img = new Image(); const url = URL.createObjectURL(file);
+            img.onload = () => {
+                const cvs = document.createElement('canvas');
+                const MAX = 4096; let w = img.width, h = img.height;
+                if(w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w *= r; h *= r; }
+                cvs.width = w; cvs.height = h;
+                cvs.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(cvs.toDataURL('image/webp', 0.8));
+                URL.revokeObjectURL(url);
+            };
+            img.src = url;
+        });
+    }
+
+    _el('f-map').onchange = async (e) => {
+        const file = e.target.files[0]; if(!file) return;
+        const b64 = await processImageToWebP(file);
+        
+        // Extract dimensions from the processed b64 for proper container sizing
+        const img = new Image();
+        img.onload = async () => {
+            const { db, appId, updateDoc, doc } = window.vtt;
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
+                mapUrl: b64, mapWidth: img.width, mapHeight: img.height 
+            });
+        };
+        img.src = b64;
+    };
+
+    _el('f-token').onchange = async (e) => {
+        const file = e.target.files[0]; if(!file) return;
+        const b64 = await processImageToWebP(file);
+        const init = snapToGrid(Math.abs(state.pan.x)/state.zoom + 100, Math.abs(state.pan.y)/state.zoom + 100);
+        const { db, appId, addDoc, collection } = window.vtt;
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'tokens'), { 
+            url: b64, x: init.x, y: init.y, hp: '10/10', mp: '10/10', zLayer: state.currentLayer 
+        });
+    };
+
+    /* ===================================================================
+       8. NÉVOA, PAN & ZOOM (CORE NATIVE)
+       =================================================================== */
+    window.setMode = (m) => {
+        state.mode = m;
+        ['move', 'fog-paint', 'fog-erase'].forEach(i => _el('tool-' + i)?.classList.remove('active'));
+        _el('tool-' + m)?.classList.add('active');
+        viewport.className = m === 'fog-paint' ? 'fog-paint' : m === 'fog-erase' ? 'fog-erase' : '';
+    };
+
+    function renderFog() {
+        fogCtx.clearRect(0, 0, fogCanvas.width, fogCanvas.height);
+        if (!state.fogCells.size) return;
+        fogCtx.fillStyle = state.role === 'mestre' ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,1.0)';
+        state.fogCells.forEach(key => {
+            const [c, r] = key.split(',').map(Number);
+            fogCtx.fillRect(c * state.gridSize, r * state.gridSize, state.gridSize, state.gridSize);
+        });
+    }
+
+    let fogTimer = null;
+    function applyFogAt(cx, cy) {
+        const { x, y } = mapCoords(cx, cy);
+        const c = Math.floor(x / state.gridSize); const r = Math.floor(y / state.gridSize);
+        const k = `${c},${r}`;
+        if (state.mode === 'fog-paint') state.fogCells.add(k); else state.fogCells.delete(k);
+        renderFog();
+        clearTimeout(fogTimer);
+        fogTimer = setTimeout(async () => {
+            const { db, appId, setDoc, doc } = window.vtt;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { fog: [...state.fogCells] }, { merge: true });
+        }, 400);
+    }
+
+    viewport.addEventListener('mousedown', (e) => {
+        if(e.button !== 0) return;
+        
+        // Ping
+        if (e.ctrlKey && state.role === 'mestre') {
+            const { x, y } = mapCoords(e.clientX, e.clientY);
+            showPing(x,y); return;
+        }
+
+        // Névoa
+        if (state.mode === 'fog-paint' || state.mode === 'fog-erase') {
+            state.isFogPainting = true; applyFogAt(e.clientX, e.clientY); return;
+        }
+
+        // Pan
+        if(e.target.closest('.sidebar') || e.target.closest('.floating-window')) return;
+        const startX = e.clientX - state.pan.x, startY = e.clientY - state.pan.y;
+        const move = (ev) => { state.pan.x = ev.clientX - startX; state.pan.y = ev.clientY - startY; renderSystem(); };
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', () => { state.isFogPainting = false; window.removeEventListener('mousemove', move); }, {once:true});
+    });
+
+    window.addEventListener('mousemove', (e) => { if(state.isFogPainting) applyFogAt(e.clientX, e.clientY); });
+
+    viewport.addEventListener('wheel', (e) => {
+        if(e.target.closest('.sidebar') || e.target.closest('.floating-window')) return;
+        e.preventDefault();
+        state.zoom = Math.min(Math.max(state.zoom + (e.deltaY > 0 ? -0.05 : 0.05), 0.1), 4);
+        renderSystem();
+    }, { passive: false });
+
+    function showPing(x,y) {
+        const d = document.createElement('div'); d.className = 'ping-dot';
+        d.style.left = x+'px'; d.style.top = y+'px';
+        container.appendChild(d); setTimeout(() => d.remove(), 2500);
+    }
+
+    window.syncCamera = async () => {
+        const { db, appId, updateDoc, doc } = window.vtt;
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { camera: { zoom: state.zoom, pan: state.pan } });
+    };
+
+</script>
 </body>
 </html>
