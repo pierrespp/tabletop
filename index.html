@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -310,24 +309,6 @@
         }
         .size-row:hover { background: rgba(99,102,241,0.07); }
 
-        /* ── Initiative ── */
-        .init-entry {
-            display: flex; align-items: center; gap: 6px;
-            padding: 6px 8px; border-radius: var(--radius-sm);
-            border: 1px solid rgba(255,255,255,0.05);
-            background: rgba(30,41,59,0.4); transition: all 0.2s;
-        }
-        .init-entry.current { background: rgba(99,102,241,0.15); border-color: rgba(99,102,241,0.4); }
-        .init-roll {
-            width: 28px; height: 28px; border-radius: 8px;
-            background: var(--accent-muted); border: 1px solid rgba(99,102,241,0.3);
-            color: #a5b4fc; font-size: 11px; font-weight: 900;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .init-name { flex: 1; font-size: 10px; font-weight: 700; color: #cbd5e1; }
-        .init-del { color: #475569; cursor: pointer; font-size: 14px; padding: 2px; border-radius: 4px; transition: color 0.15s; }
-        .init-del:hover { color: #f87171; }
-
         /* ── Dice ── */
         .dice-btn {
             background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.1);
@@ -473,17 +454,60 @@
             position: fixed; inset: 0; z-index: 99;
             background: rgba(0,0,0,0.5);
         }
+
+        /* ── Janela de Setup de Iniciativa ── */
+        .init-setup-row {
+            display: flex; gap: 8px; align-items: center;
+            background: rgba(30,41,59,0.5); padding: 8px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .init-setup-input {
+            background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.1);
+            color: white; font-size: 11px; padding: 6px 8px; border-radius: 6px; outline: none;
+        }
+        .init-setup-input:focus { border-color: var(--accent-light); }
+
+        /* ── Painel Flutuante de Iniciativa ── */
+        #floating-init-panel {
+            position: fixed; top: 20px; right: 20px; z-index: 300;
+            width: 260px; height: 320px; min-width: 200px; min-height: 200px;
+            background: rgba(15,23,42,0.95); backdrop-filter: blur(12px);
+            border: 1px solid var(--border-soft); border-radius: var(--radius-md);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            display: none; flex-direction: column; overflow: hidden;
+        }
+        #floating-init-header {
+            background: rgba(30,41,59,0.8); border-bottom: 1px solid var(--border-subtle);
+            padding: 10px 12px; cursor: move; display: flex; justify-content: space-between; align-items: center;
+            user-select: none;
+        }
+        #floating-init-list {
+            flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 4px;
+        }
+        .floating-init-entry {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(30,41,59,0.4); font-size: 11px; font-weight: 700;
+        }
+        .floating-init-entry.current {
+            background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.5); box-shadow: 0 0 10px rgba(99,102,241,0.2);
+        }
+        .floating-init-entry.npc { color: #f87171; }
+        .floating-init-entry.pc { color: #34d399; }
+        #floating-init-resizer {
+            position: absolute; bottom: 0; right: 0; width: 16px; height: 16px;
+            cursor: se-resize; z-index: 10;
+            background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.2) 50%);
+        }
     </style>
 </head>
 <body>
 
-<!-- ══ SETUP MODAL ══ -->
 <div id="setup-modal" class="fixed inset-0 bg-black/90 z-[600] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
         <h1 class="text-3xl font-black text-white mb-2 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
         <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-6">Mesa Virtual de RPG</p>
 
-        <!-- Passo 1: Nome -->
         <div id="setup-step-name">
             <p class="text-[11px] text-slate-400 mb-3">Como você quer ser chamado?</p>
             <input id="setup-name-input" type="text" maxlength="24" placeholder="Seu nome..." autocomplete="off"
@@ -491,7 +515,6 @@
             <button onclick="confirmName()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl font-bold transition-all active:scale-95">Continuar →</button>
         </div>
 
-        <!-- Passo 2: Papel -->
         <div id="setup-step-role" style="display:none">
             <p id="setup-name-greeting" class="text-[11px] text-slate-400 mb-4">Como deseja entrar?</p>
             <div class="space-y-3">
@@ -504,7 +527,6 @@
     </div>
 </div>
 
-<!-- ══ TOKEN SIZE MODAL (novo token) ══ -->
 <div id="token-size-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">🧙 Tamanho do Token</p>
@@ -526,7 +548,6 @@
     </div>
 </div>
 
-<!-- ══ RESIZE TOKEN MODAL (contexto do token existente) ══ -->
 <div id="resize-token-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">📐 Alterar Tamanho do Token</p>
@@ -556,7 +577,6 @@
     </div>
 </div>
 
-<!-- ══ HP + MANA MODAL ══ -->
 <div id="hp-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">❤️ Editar Atributos do Token</p>
@@ -585,7 +605,6 @@
     </div>
 </div>
 
-<!-- ══ RENAME MODAL ══ -->
 <div id="rename-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">✏️ Renomear Token</p>
@@ -597,7 +616,6 @@
     </div>
 </div>
 
-<!-- ══ STATUS MODAL (condições do token) ══ -->
 <div id="status-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">🩹 Condições do Token</p>
@@ -606,12 +624,45 @@
     </div>
 </div>
 
-<!-- ══ CONTEXT MENU ══ -->
+<div id="init-setup-modal" class="modal-overlay">
+    <div class="modal-box" style="width: 480px; max-width: 95vw;">
+        <p class="modal-title">⚔️ Adicionar Personagens na Iniciativa</p>
+        <div class="flex justify-between mb-2 px-1">
+            <span class="text-[9px] text-slate-500 font-bold w-1/2">NOME</span>
+            <span class="text-[9px] text-slate-500 font-bold w-1/5 text-center">BÔNUS</span>
+            <span class="text-[9px] text-slate-500 font-bold w-1/4 text-center">TIPO</span>
+            <span class="w-6"></span>
+        </div>
+        <div id="init-setup-list" class="space-y-2 max-h-[40vh] overflow-y-auto mb-4 pr-1">
+            </div>
+        <button onclick="addInitSetupEntry('', 0, 'NPC')" class="w-full bg-slate-800 border border-slate-700 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all mb-4">
+            ➕ Adicionar Personagem
+        </button>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeInitSetupModal()">Cancelar</button>
+            <button class="btn-save" onclick="rollAndStartInitiative()">🎲 Rolar e Iniciar</button>
+        </div>
+    </div>
+</div>
+
+<div id="floating-init-panel">
+    <div id="floating-init-header">
+        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">⚡ Ordem de Turnos</span>
+        <button onclick="closeFloatingInit()" class="mestre-only text-slate-500 hover:text-red-400 text-sm font-bold">✕</button>
+    </div>
+    <div id="floating-init-list">
+        </div>
+    <div class="mestre-only border-t border-slate-800 bg-slate-900 p-2 flex gap-2">
+        <button onclick="prevTurn()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold py-2 rounded-lg">◀ Voltar</button>
+        <button onclick="nextTurn()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold py-2 rounded-lg">Avançar ▶</button>
+    </div>
+    <div id="floating-init-resizer"></div>
+</div>
+
 <div id="ctx-menu" role="menu" aria-label="Menu de contexto do token">
     <div class="ctx-item" id="ctx-rename">✏️ &nbsp;Renomear</div>
     <div class="ctx-item" id="ctx-hp">❤️ &nbsp;Editar HP / Mana</div>
     <div class="ctx-item" id="ctx-status">🩹 &nbsp;Condições</div>
-    <!-- Itens exclusivos do Mestre -->
     <div class="ctx-divider ctx-gm-only"></div>
     <div class="ctx-item ctx-gm-only" id="ctx-resize-token">📐 &nbsp;Alterar Tamanho</div>
     <div class="ctx-item ctx-gm-only" id="ctx-player-ctrl">🎮 &nbsp;Liberar para Jogadores</div>
@@ -622,16 +673,12 @@
     <div class="ctx-item ctx-gm-only" id="ctx-color-b">🔵 &nbsp;Borda Azul</div>
     <div class="ctx-item ctx-gm-only" id="ctx-color-y">🟡 &nbsp;Borda Amarela</div>
     <div class="ctx-divider ctx-gm-only"></div>
-    <div class="ctx-item ctx-gm-only" id="ctx-init">⚡ &nbsp;Adicionar à Iniciativa</div>
-    <div class="ctx-divider ctx-gm-only"></div>
     <div class="ctx-item danger ctx-gm-only" id="ctx-delete">🗑️ &nbsp;Deletar Token</div>
 </div>
 
-<!-- ══ BOTÃO MOBILE ══ -->
 <button id="mobile-menu-btn" aria-label="Abrir menu" onclick="toggleMobileMenu()">☰</button>
 <div id="mobile-overlay" onclick="closeMobileMenu()"></div>
 
-<!-- ══ SIDEBAR ══ -->
 <div class="sidebar" id="sidebar">
     <div class="flex items-center justify-between mb-5">
         <div>
@@ -643,10 +690,8 @@
 
     <div class="flex-1 overflow-y-auto space-y-4 pr-1">
 
-        <!-- ─ FERRAMENTAS MESTRE ─ -->
         <section class="mestre-only space-y-3">
 
-            <!-- Ferramentas de Modo -->
             <div>
                 <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2">Ferramenta</p>
                 <div class="tool-bar">
@@ -660,7 +705,6 @@
                 </div>
             </div>
 
-            <!-- Ações -->
             <div class="space-y-2">
                 <button onclick="document.getElementById('f-map').click()" class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all" aria-label="Alterar mapa">🗺️ Alterar Mapa</button>
                 <button onclick="openTokenSizeModal()"  class="w-full bg-slate-800/50 border border-slate-700 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all" aria-label="Adicionar novo token">🧙 Novo Token</button>
@@ -669,7 +713,6 @@
 
             <p class="text-[8px] text-slate-600 text-center">Ctrl+Clique = Ping &nbsp;|&nbsp; Shift+Arrastar = Régua</p>
 
-            <!-- Tipo de Grade -->
             <div class="bg-black/20 p-3 rounded-xl border border-white/5 space-y-3">
                 <div>
                     <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-1.5 uppercase">
@@ -695,7 +738,6 @@
                 </div>
             </div>
 
-            <!-- Sistema de Camadas (layers) -->
             <div class="bg-black/20 p-3 rounded-xl border border-white/5">
                 <div class="flex items-center justify-between mb-2">
                     <p class="text-[9px] font-bold text-slate-500 uppercase">🏗️ Camada Ativa</p>
@@ -708,7 +750,6 @@
                 <p class="text-[8px] text-slate-600">Tokens ocultos em outras camadas ficam invisíveis para jogadores.</p>
             </div>
 
-            <!-- Tamanho do Mapa — retrátil -->
             <div>
                 <button class="collapse-btn" onclick="toggleMapSize()" aria-expanded="false" aria-controls="map-size-panel">
                     <span class="flex-1">📐 Tamanho do Mapa</span>
@@ -734,30 +775,19 @@
             </div>
         </section>
 
-        <!-- ─ INICIATIVA ─ -->
         <section class="space-y-2">
-            <div class="flex items-center justify-between">
-                <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">⚡ Iniciativa</h3>
-                <div class="flex gap-1">
-                    <button onclick="nextTurn()"        class="text-[9px] font-bold px-2 py-1 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white transition-all" title="Próximo turno" aria-label="Próximo turno">▶</button>
-                    <button onclick="resetInitiative()" class="text-[9px] font-bold px-2 py-1 rounded-lg bg-slate-800/50 border border-slate-700 text-slate-400 hover:bg-slate-700 transition-all" title="Resetar" aria-label="Resetar iniciativa">↺</button>
-                </div>
-            </div>
-            <div class="mestre-only flex gap-1">
-                <input type="text"   id="init-name-input" placeholder="Nome"  class="flex-1 bg-slate-800/60 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px] text-slate-300 outline-none focus:border-indigo-500" style="min-width:0" aria-label="Nome para iniciativa">
-                <input type="number" id="init-roll-input" placeholder="Rol."  class="w-12 bg-slate-800/60 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px] text-slate-300 outline-none focus:border-indigo-500 text-center" aria-label="Valor de rolagem">
-                <button onclick="addInitEntry()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-bold hover:bg-indigo-600 hover:text-white transition-all" aria-label="Adicionar à iniciativa">+</button>
-            </div>
-            <div id="initiative-list" class="space-y-1 min-h-[40px]">
-                <p class="text-[9px] text-slate-600 text-center py-2">Sem entradas.</p>
-            </div>
+            <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">⚡ Iniciativa</h3>
+            <button onclick="openInitSetupModal()" class="mestre-only w-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">
+                📋 Preparar Iniciativa
+            </button>
+            <button onclick="toggleFloatingInit()" id="btn-toggle-init" class="w-full bg-slate-800/50 border border-slate-700 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all" style="display:none;">
+                👁️ Mostrar Painel de Turnos
+            </button>
         </section>
 
-        <!-- ─ DADOS ─ -->
         <section class="space-y-2">
             <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">🎲 Rolagem de Dados</h3>
 
-            <!-- Parser avançado de notação de dados -->
             <div class="bg-black/20 border border-white/5 rounded-xl p-2 space-y-1.5">
                 <p class="text-[8px] font-bold text-slate-500 uppercase">Notação Avançada</p>
                 <div class="flex gap-1.5">
@@ -772,7 +802,6 @@
                 <p class="text-[7px] text-slate-600">kh = manter maior | kl = manter menor | d = descartar menor | dh = descartar maior</p>
             </div>
 
-            <!-- Tipo de dado -->
             <div class="flex flex-wrap gap-1.5" id="dice-type-grid">
                 <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black" aria-label="Dado de 4 faces">d4</button>
                 <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black" aria-label="Dado de 6 faces">d6</button>
@@ -783,7 +812,6 @@
                 <button onclick="setDiceType(100)" id="dt-100" class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black" aria-label="Dado percentual">d100</button>
             </div>
 
-            <!-- Quantidade e Bônus -->
             <div class="flex gap-2">
                 <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
                     <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Qtd.</p>
@@ -803,13 +831,11 @@
                 </div>
             </div>
 
-            <!-- Preview e botão -->
             <div class="text-center">
                 <p id="dice-preview" class="text-[9px] text-slate-500 mb-1.5">1d20</p>
                 <button onclick="roll()" class="w-full dice-btn py-2.5 rounded-xl text-[11px] font-black hover:bg-indigo-600 hover:text-white" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#a5b4fc;" aria-label="Rolar dados">🎲 ROLAR</button>
             </div>
 
-            <!-- Histórico compartilhado (tempo real) -->
             <div class="flex items-center justify-between mb-1">
                 <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Histórico</p>
                 <button onclick="clearDiceHistory()" class="text-[8px] font-bold px-2 py-0.5 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-500 hover:bg-red-900/40 hover:text-red-400 hover:border-red-700/40 transition-all" aria-label="Limpar histórico de dados">🗑 Limpar</button>
@@ -819,7 +845,6 @@
 
     </div>
 
-    <!-- ─ ONLINE ─ -->
     <section class="space-y-2 mt-1">
         <h3 class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">🟢 Online Agora</h3>
         <div class="presence-panel">
@@ -833,15 +858,12 @@
     <input type="file" id="f-token" class="hidden" accept="image/*">
 </div>
 
-<!-- ══ LAYER INDICATOR ══ -->
 <div id="layer-indicator" aria-label="Camada ativa">Camada: <span id="layer-num">0</span></div>
 
-<!-- ══ VIEWPORT ══ -->
 <div id="viewport">
     <div id="map-container">
         <img id="active-map" alt="Mapa da cena">
         <div id="grid-overlay"></div>
-        <!-- Canvas para grade hexagonal -->
         <canvas id="hex-grid-canvas"></canvas>
         <div id="tokens-layer"></div>
         <canvas id="fog-canvas"></canvas>
@@ -862,7 +884,7 @@
         mapWidth: 1200, mapHeight: 800,
         fogCells: new Set(),
         mode: 'move',
-        initiative: [], initiativeTurn: 0,
+        initiative: [], initiativeTurn: 0, showTracker: false,
         ruler: null,
         isFogPainting: false, isRulerActive: false,
         pendingTokenSize: 1,
@@ -966,7 +988,7 @@
                     grid: 60, opacity: 0.2, gridType: 'square',
                     mapUrl: '', mapWidth: 1200, mapHeight: 800,
                     camera: { zoom: 1, pan: { x: 100, y: 100 } },
-                    fog: [], initiative: [], initiativeTurn: 0, ping: null,
+                    fog: [], initiative: [], initiativeTurn: 0, showTracker: false, ping: null,
                     activeLayer: 0
                 });
             }
@@ -1010,9 +1032,11 @@
             /* Névoa — atualiza para todos */
             state.fogCells = new Set(d.fog ?? []);
 
+            /* Sincronia do novo Tracker de Iniciativa */
             state.initiative     = d.initiative     ?? [];
             state.initiativeTurn = d.initiativeTurn ?? 0;
-            renderInitiative();
+            state.showTracker    = d.showTracker    ?? false;
+            renderFloatingInitiative();
 
             if (d.ping && d.ping.ts && (Date.now() - d.ping.ts) < 4000) {
                 showPing(d.ping.x, d.ping.y);
@@ -1126,8 +1150,8 @@
      * Usa coordenadas axiais para calcular posições sem erros euclidanos.
      *
      * Fórmula (flat-top hex vertical):
-     *   cx = col * w * 0.75
-     *   cy = row * h + (col % 2 === 0 ? 0 : h/2)
+     * cx = col * w * 0.75
+     * cy = row * h + (col % 2 === 0 ? 0 : h/2)
      * onde w = gridSize, h = w * √3/2
      *
      * Para pointy-top hex horizontal inverte-se x↔y.
@@ -1718,11 +1742,9 @@
 
     _el('ctx-init').onclick = () => {
         const id = ctxTokenId; if (!id) return;
-        const nameEl = _el('name-' + id);
-        const name = (nameEl && nameEl.innerText) || 'Token';
         closeCtxMenu();
-        const roll = parseInt(prompt(`Rolagem de iniciativa de "${name}":`) || '0') || 0;
-        addInitEntryDirect(id, name, roll);
+        // Apenas abre o modal de setup se o Mestre quiser adicionar dali, ou mantenha uma notificação visual
+        alert("Utilize o botão 'Preparar Iniciativa' na barra lateral para adicionar personagens.");
     };
 
     _el('ctx-delete').onclick = async () => {
@@ -1840,52 +1862,123 @@
     };
 
     /* ═══════════════════════════════════════════════════════════════
-       ─── Iniciativa ───
+       ─── Iniciativa (Setup e Painel Flutuante) ───
     ═══════════════════════════════════════════════════════════════ */
-    function renderInitiative() {
-        const list = _el('initiative-list');
-        if (!state.initiative.length) {
-            list.innerHTML = '<p class="text-[9px] text-slate-600 text-center py-2">Sem entradas.</p>';
+
+    /* ─ Setup Modal ─ */
+    let initSetupEntries = [];
+
+    window.openInitSetupModal = () => {
+        const list = _el('init-setup-list');
+        list.innerHTML = '';
+        initSetupEntries = [];
+        
+        // Se já houver iniciativa rodando, carrega os dados atuais para edição
+        if (state.initiative.length > 0) {
+            state.initiative.forEach(e => addInitSetupEntry(e.name, e.bonus, e.type));
+        } else {
+            addInitSetupEntry('', 0, 'PC'); // Cria um vazio por padrão
+        }
+        _el('init-setup-modal').classList.add('open');
+    };
+
+    window.closeInitSetupModal = () => _el('init-setup-modal').classList.remove('open');
+
+    window.addInitSetupEntry = (name = '', bonus = 0, type = 'NPC') => {
+        const id = Date.now() + Math.random();
+        initSetupEntries.push({ id });
+        
+        const div = document.createElement('div');
+        div.className = 'init-setup-row';
+        div.id = 'setup-row-' + id;
+        div.innerHTML = `
+            <input type="text" class="init-setup-input w-1/2 name-input" placeholder="Nome" value="${name}">
+            <input type="number" class="init-setup-input w-1/5 text-center bonus-input" placeholder="Bônus" value="${bonus}">
+            <select class="init-setup-input w-1/4 type-input">
+                <option value="PC" ${type==='PC'?'selected':''}>Jogador</option>
+                <option value="NPC" ${type==='NPC'?'selected':''}>NPC</option>
+            </select>
+            <button onclick="removeInitSetupEntry(${id})" class="text-slate-500 hover:text-red-400 font-bold px-1">✕</button>
+        `;
+        _el('init-setup-list').appendChild(div);
+    };
+
+    window.removeInitSetupEntry = (id) => {
+        initSetupEntries = initSetupEntries.filter(e => e.id !== id);
+        _el('setup-row-' + id)?.remove();
+    };
+
+    window.rollAndStartInitiative = async () => {
+        const rows = document.querySelectorAll('.init-setup-row');
+        const rolledInitiative = [];
+
+        rows.forEach(row => {
+            const name = row.querySelector('.name-input').value.trim() || 'Desconhecido';
+            const bonus = parseInt(row.querySelector('.bonus-input').value) || 0;
+            const type = row.querySelector('.type-input').value;
+            const roll = Math.floor(Math.random() * 20) + 1 + bonus; // 1d20 + bônus
+            
+            rolledInitiative.push({ id: Date.now() + Math.random(), name, bonus, type, roll });
+        });
+
+        // Ordena do maior pro menor
+        rolledInitiative.sort((a, b) => b.roll - a.roll);
+
+        closeInitSetupModal();
+
+        try {
+            const { db, appId, doc, setDoc } = window.vtt;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
+                initiative: rolledInitiative, 
+                initiativeTurn: 0,
+                showTracker: true 
+            }, { merge: true });
+        } catch (e) { console.error('[VTT] Erro ao iniciar iniciativa:', e); }
+    };
+
+    /* ─ Painel Flutuante ─ */
+    window.renderFloatingInitiative = () => {
+        const panel = _el('floating-init-panel');
+        const list = _el('floating-init-list');
+        const btnToggle = _el('btn-toggle-init');
+
+        // Mostra o botão na sidebar apenas se o tracker existir e tiver itens
+        if(btnToggle) btnToggle.style.display = state.initiative.length > 0 ? 'block' : 'none';
+
+        if (!state.showTracker || state.initiative.length === 0) {
+            panel.style.display = 'none';
             return;
         }
-        const sorted = [...state.initiative].sort((a, b) => b.roll - a.roll);
+
+        panel.style.display = 'flex';
         list.innerHTML = '';
-        sorted.forEach((entry, idx) => {
-            const curr = idx === (state.initiativeTurn % sorted.length);
+
+        state.initiative.forEach((entry, idx) => {
+            const isCurrent = idx === state.initiativeTurn;
+            const typeClass = entry.type === 'PC' ? 'pc' : 'npc';
+            
             const div = document.createElement('div');
-            div.className = 'init-entry' + (curr ? ' current' : '');
+            div.className = `floating-init-entry ${isCurrent ? 'current' : ''}`;
             div.innerHTML = `
-                <div class="init-roll">${entry.roll}</div>
-                <div class="init-name">${entry.name}${curr ? ' ◀' : ''}</div>
-                <div class="init-del mestre-only" onclick="removeInitEntry('${entry.id}')" title="Remover">✕</div>
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span class="w-6 text-center text-slate-300 bg-black/30 rounded px-1">${entry.roll}</span>
+                    <span class="${typeClass} truncate">${entry.name} ${isCurrent ? '◀' : ''}</span>
+                </div>
             `;
             list.appendChild(div);
         });
-    }
-
-    window.addInitEntry = () => {
-        const name = _el('init-name-input').value.trim();
-        const roll = parseInt(_el('init-roll-input').value) || 0;
-        if (!name) return;
-        _el('init-name-input').value = '';
-        _el('init-roll-input').value = '';
-        addInitEntryDirect(Date.now().toString(), name, roll);
     };
 
-    async function addInitEntryDirect(id, name, roll) {
-        const updated = [...state.initiative.filter(e => e.id !== id), { id, name, roll }];
-        try {
-            const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiative: updated }, { merge: true });
-        } catch (e) { console.error('[VTT] Erro ao adicionar iniciativa:', e); }
-    }
+    window.toggleFloatingInit = () => {
+        const panel = _el('floating-init-panel');
+        panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    };
 
-    window.removeInitEntry = async (id) => {
-        const updated = state.initiative.filter(e => e.id !== id);
+    window.closeFloatingInit = async () => {
         try {
             const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiative: updated, initiativeTurn: 0 }, { merge: true });
-        } catch (e) { console.error('[VTT] removeInitEntry:', e); }
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { showTracker: false }, { merge: true });
+        } catch (e) { console.error('[VTT] Erro ao fechar iniciativa:', e); }
     };
 
     window.nextTurn = async () => {
@@ -1897,12 +1990,56 @@
         } catch (e) { console.error('[VTT] nextTurn:', e); }
     };
 
-    window.resetInitiative = async () => {
+    window.prevTurn = async () => {
+        if (!state.initiative.length) return;
+        const prev = (state.initiativeTurn - 1 + state.initiative.length) % state.initiative.length;
         try {
             const { db, appId, doc, setDoc } = window.vtt;
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: 0 }, { merge: true });
-        } catch (e) { console.error('[VTT] resetInitiative:', e); }
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: prev }, { merge: true });
+        } catch (e) { console.error('[VTT] prevTurn:', e); }
     };
+
+    /* ─ Drag & Resize do Painel Flutuante ─ */
+    const floatPanel = _el('floating-init-panel');
+    const floatHeader = _el('floating-init-header');
+    const floatResizer = _el('floating-init-resizer');
+    
+    let isDraggingInit = false, isResizingInit = false;
+    let dragStartX, dragStartY, panelStartX, panelStartY, panelStartW, panelStartH;
+
+    floatHeader.addEventListener('mousedown', (e) => {
+        if (e.target.tagName === 'BUTTON') return;
+        isDraggingInit = true;
+        dragStartX = e.clientX; dragStartY = e.clientY;
+        panelStartX = floatPanel.offsetLeft; panelStartY = floatPanel.offsetTop;
+        document.body.style.userSelect = 'none';
+    });
+
+    floatResizer.addEventListener('mousedown', (e) => {
+        isResizingInit = true;
+        dragStartX = e.clientX; dragStartY = e.clientY;
+        panelStartW = floatPanel.offsetWidth; panelStartH = floatPanel.offsetHeight;
+        e.stopPropagation();
+        document.body.style.userSelect = 'none';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (isDraggingInit) {
+            floatPanel.style.left = (panelStartX + e.clientX - dragStartX) + 'px';
+            floatPanel.style.top = (panelStartY + e.clientY - dragStartY) + 'px';
+            floatPanel.style.right = 'auto'; // Remove o right para o left funcionar livremente
+        }
+        if (isResizingInit) {
+            floatPanel.style.width = Math.max(200, panelStartW + e.clientX - dragStartX) + 'px';
+            floatPanel.style.height = Math.max(200, panelStartH + e.clientY - dragStartY) + 'px';
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        isDraggingInit = false;
+        isResizingInit = false;
+        document.body.style.userSelect = '';
+    });
 
     /* ═══════════════════════════════════════════════════════════════
        ─── Modo de Ferramenta ───
@@ -2124,12 +2261,12 @@
         const cleaned = notation.toLowerCase().replace(/\s/g, '');
 
         /* Regex para capturar cada componente:
-         *   (\d*)d(\d+)       → Nd{S} (N dados de S lados)
-         *   (?:kh(\d+))?      → keep high N
-         *   (?:kl(\d+))?      → keep low N
-         *   (?:dh(\d+))?      → drop high N
-         *   (?:(?:d(?!h))(\d+))?  → drop lowest N (sem letra 'h' depois)
-         *   ([+-]\d+)?        → bônus/penalidade
+         * (\d*)d(\d+)       → Nd{S} (N dados de S lados)
+         * (?:kh(\d+))?      → keep high N
+         * (?:kl(\d+))?      → keep low N
+         * (?:dh(\d+))?      → drop high N
+         * (?:(?:d(?!h))(\d+))?  → drop lowest N (sem letra 'h' depois)
+         * ([+-]\d+)?        → bônus/penalidade
          */
         const groupRe = /(\d*)d(\d+)(?:kh(\d+))?(?:kl(\d+))?(?:dh(\d+))?(?:dl?(\d+))?([+-]\d+)?/g;
 
@@ -2407,10 +2544,6 @@
             list.appendChild(div);
         });
     }
-
-    /* ─── Enter nos inputs de iniciativa ─── */
-    _el('init-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addInitEntry(); });
-    _el('init-roll-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addInitEntry(); });
 
     /* ─── Enter no input de notação de dados ─── */
     _el('dice-notation-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') window.rollNotation(); });
