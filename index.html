@@ -1740,13 +1740,6 @@
         };
     });
 
-    _el('ctx-init').onclick = () => {
-        const id = ctxTokenId; if (!id) return;
-        closeCtxMenu();
-        // Apenas abre o modal de setup se o Mestre quiser adicionar dali, ou mantenha uma notificação visual
-        alert("Utilize o botão 'Preparar Iniciativa' na barra lateral para adicionar personagens.");
-    };
-
     _el('ctx-delete').onclick = async () => {
         const id = ctxTokenId; if (!id) return;
         closeCtxMenu();
