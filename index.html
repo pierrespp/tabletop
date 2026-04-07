@@ -1961,10 +1961,16 @@
             list.appendChild(div);
         });
     };
-
-    window.toggleFloatingInit = () => {
+    window.toggleFloatingInit = async () => {
         const panel = _el('floating-init-panel');
-        panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+        const isNowVisible = panel.style.display === 'none';
+        panel.style.display = isNowVisible ? 'flex' : 'none';
+        if (isNowVisible && window.vtt) {
+            try {
+                const { db, appId, doc, setDoc } = window.vtt;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { showTracker: true }, { merge: true });
+            } catch (e) { console.error('[VTT] toggleFloatingInit:', e); }
+        }
     };
 
     window.closeFloatingInit = async () => {
