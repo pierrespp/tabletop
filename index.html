@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabletop RPG Pro</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, query, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBVw6l8IfXlGTFKHHJLjsqAgyRwlxaVzvg",
+            authDomain: "tabletop-teste.firebaseapp.com",
+            projectId: "tabletop-teste",
+            storageBucket: "tabletop-teste.firebasestorage.app",
+            messagingSenderId: "562514175214",
+            appId: "1:562514175214:web:8c3be376fb82b0609d7fff"
+        };
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            const appId = 'vtt-sessao-001';
+            window.vtt = { db, auth, appId, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, addDoc, deleteDoc, signInAnonymously, query, orderBy, getDocs };
+            console.log('[VTT] Firebase inicializado com sucesso');
+        } catch (err) {
+            console.error('[VTT] ERRO ao inicializar Firebase:', err);
+            document.addEventListener('DOMContentLoaded', () => {
+                const log = document.getElementById('auth-log');
+                if (log) log.innerText = 'Erro Firebase: ' + err.message;
+            });
+        }
+    </script>
+</head>
+
+<body>
+
+<div id="setup-modal" class="fixed inset-0 bg-black/90 z-[600] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+        <h1 class="text-3xl font-black text-white mb-2 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
+        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-6">Mesa Virtual de RPG</p>
+        <div id="setup-step-name">
+            <p class="text-[11px] text-slate-400 mb-3">Como você quer ser chamado?</p>
+            <input id="setup-name-input" type="text" maxlength="24" placeholder="Seu nome..." autocomplete="off"
+                class="w-full bg-slate-800 border border-slate-700 text-white text-center text-base font-bold py-3 rounded-2xl outline-none focus:border-indigo-500 mb-4 placeholder-slate-600">
+            <button onclick="confirmName()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl font-bold transition-all active:scale-95">Continuar →</button>
+        </div>
+        <div id="setup-step-role" style="display:none">
+            <p id="setup-name-greeting" class="text-[11px] text-slate-400 mb-4">Como deseja entrar?</p>
+            <div class="space-y-3">
+                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20">⚔️ Entrar como Mestre</button>
+                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all active:scale-95">🎲 Entrar como Jogador</button>
+            </div>
+        </div>
+        <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando Escolha...</p>
+    </div>
+</div>
+
+<div id="token-size-modal" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-title">🧙 Tamanho do Token</p>
+        <div class="size-picker-grid">
+            <div class="size-choice" onclick="selectTokenSize(1)">
+                <div class="size-choice-preview" style="width:36px;height:36px"></div>
+                <span>1 × 1</span><small>Padrão</small>
+            </div>
+            <div class="size-choice" onclick="selectTokenSize(2)">
+                <div class="size-choice-preview" style="width:52px;height:52px"></div>
+                <span>2 × 2</span><small>Grande</small>
+            </div>
+            <div class="size-choice" onclick="selectTokenSize(3)">
+                <div class="size-choice-preview" style="width:68px;height:68px"></div>
+                <span>3 × 3</span><small>Enorme</small>
+            </div>
+        </div>
+        <button class="btn-cancel w-full mt-4" onclick="closeTokenSizeModal()">Cancelar</button>
+    </div>
+</div>
+
+<div id="resize-token-modal" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-title">📐 Alterar Tamanho do Token</p>
+        <div class="size-picker-grid">
+            <div class="size-choice" onclick="applyTokenResize(1)">
+                <div class="size-choice-preview" style="width:36px;height:36px"></div>
+                <span>1 × 1</span><small>Padrão</small>
+            </div>
+            <div class="size-choice" onclick="applyTokenResize(2)">
+                <div class="size-choice-preview" style="width:52px;height:52px"></div>
+                <span>2 × 2</span><small>Grande</small>
+            </div>
+            <div class="size-choice" onclick="applyTokenResize(3)">
+                <div class="size-choice-preview" style="width:68px;height:68px"></div>
+                <span>3 × 3</span><small>Enorme</small>
+            </div>
+            <div class="size-choice" onclick="applyTokenResize(4)">
+                <div class="size-choice-preview" style="width:80px;height:80px"></div>
+                <span>4 × 4</span><small>Colossal</small>
+            </div>
+            <div class="size-choice" onclick="applyTokenResize(0.5)">
+                <div class="size-choice-preview" style="width:24px;height:24px"></div>
+                <span>½</span><small>Pequeno</small>
+            </div>
+        </div>
+        <button class="btn-cancel w-full mt-4" onclick="closeResizeTokenModal()">Cancelar</button>
+    </div>
+</div>
+
+<div id="hp-modal" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-title">❤️ Editar Atributos do Token</p>
+        <div class="space-y-3">
+            <div>
+                <label class="text-[9px] text-slate-500 block mb-1">HP Atual</label>
+                <input type="number" id="hp-current-input" class="modal-input" placeholder="ex: 25">
+            </div>
+            <div>
+                <label class="text-[9px] text-slate-500 block mb-1">HP Máximo</label>
+                <input type="number" id="hp-max-input" class="modal-input" placeholder="ex: 40">
+            </div>
+            <div>
+                <label class="text-[9px] text-slate-500 block mb-1">Mana / Energia Atual</label>
+                <input type="number" id="mana-current-input" class="modal-input" placeholder="ex: 20">
+            </div>
+            <div>
+                <label class="text-[9px] text-slate-500 block mb-1">Mana / Energia Máxima</label>
+                <input type="number" id="mana-max-input" class="modal-input" placeholder="ex: 30">
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button class="btn-cancel" id="hp-cancel">Cancelar</button>
+            <button class="btn-save" id="hp-save">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div id="rename-modal" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-title">✏️ Renomear Token</p>
+        <input type="text" id="rename-input" class="modal-input" placeholder="Nome do personagem">
+        <div class="modal-btns">
+            <button class="btn-cancel" id="rename-cancel">Cancelar</button>
+            <button class="btn-save" id="rename-save">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div id="status-modal" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-title">🩹 Condições do Token</p>
+        <div id="status-grid" class="grid grid-cols-4 gap-2 mb-4"></div>
+        <button class="btn-cancel w-full" id="status-close">Fechar</button>
+    </div>
+</div>
+
+<div id="init-setup-modal" class="modal-overlay">
+    <div class="modal-box" style="width: 480px; max-width: 95vw;">
+        <p class="modal-title">⚔️ Adicionar Personagens na Iniciativa</p>
+        <div class="flex justify-between mb-2 px-1">
+            <span class="text-[9px] text-slate-500 font-bold w-1/2">NOME</span>
+            <span class="text-[9px] text-slate-500 font-bold w-1/5 text-center">BÔNUS</span>
+            <span class="text-[9px] text-slate-500 font-bold w-1/4 text-center">TIPO</span>
+            <span class="w-6"></span>
+        </div>
+        <div id="init-setup-list" class="space-y-2 max-h-[40vh] overflow-y-auto mb-4 pr-1"></div>
+        <button onclick="addInitSetupEntry('', 0, 'NPC')" class="w-full bg-slate-800 border border-slate-700 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all mb-4">
+            ➕ Adicionar Personagem
+        </button>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeInitSetupModal()">Cancelar</button>
+            <button class="btn-save" onclick="rollAndStartInitiative()">🎲 Rolar e Iniciar</button>
+        </div>
+    </div>
+</div>
+
+<div id="floating-init-panel">
+    <div id="floating-init-header">
+        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">⚡ Ordem de Turnos</span>
+        <button onclick="closeFloatingInit()" class="mestre-only text-slate-500 hover:text-red-400 text-sm font-bold">✕</button>
+    </div>
+    <div id="floating-init-list"></div>
+    <div class="mestre-only border-t border-slate-800 bg-slate-900 p-2 flex gap-2">
+        <button onclick="prevTurn()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold py-2 rounded-lg">◀ Voltar</button>
+        <button onclick="nextTurn()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold py-2 rounded-lg">Avançar ▶</button>
+    </div>
+    <div id="floating-init-resizer"></div>
+</div>
+
+<div id="ctx-menu" role="menu" aria-label="Menu de contexto do token">
+    <div class="ctx-item" id="ctx-rename">✏️ &nbsp;Renomear</div>
+    <div class="ctx-item" id="ctx-hp">❤️ &nbsp;Editar HP / Mana</div>
+    <div class="ctx-item" id="ctx-status">🩹 &nbsp;Condições</div>
+    <div class="ctx-divider ctx-gm-only"></div>
+    <div class="ctx-item ctx-gm-only" id="ctx-resize-token">📐 &nbsp;Alterar Tamanho</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-player-ctrl">🎮 &nbsp;Liberar para Jogadores</div>
+    <div class="ctx-divider ctx-gm-only"></div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-w">⬜ &nbsp;Borda Branca</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-r">🔴 &nbsp;Borda Vermelha</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-g">🟢 &nbsp;Borda Verde</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-b">🔵 &nbsp;Borda Azul</div>
+    <div class="ctx-item ctx-gm-only" id="ctx-color-y">🟡 &nbsp;Borda Amarela</div>
+    <div class="ctx-divider ctx-gm-only"></div>
+    <div class="ctx-item danger ctx-gm-only" id="ctx-delete">🗑️ &nbsp;Deletar Token</div>
+</div>
+
+<button id="mobile-menu-btn" aria-label="Abrir menu" onclick="toggleMobileMenu()">☰</button>
+
+<div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+
+<div class="sidebar" id="sidebar">
+
+    <!-- ── Cabeçalho ── -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Tabletop Pro</h2>
+            <p id="role-label" class="text-[9px] text-slate-500 font-mono">Conectando...</p>
+        </div>
+        <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" title="Status da conexão"></div>
+    </div>
+
+    <!-- ── Ferramentas fixas (só mestre) ── -->
+    <div class="mestre-only tools-fixed mb-3">
+        <p class="text-[8px] font-bold text-slate-600 uppercase tracking-widest mb-2">Ferramenta ativa</p>
+        <div class="tool-bar">
+            <button class="tool-btn active" id="tool-move"      onclick="setMode('move')"      aria-label="Mover">🖐 Mover</button>
+            <button class="tool-btn"        id="tool-fog-paint" onclick="setMode('fog-paint')" aria-label="Pintar névoa">🌫️ Névoa</button>
+            <button class="tool-btn"        id="tool-fog-erase" onclick="setMode('fog-erase')" aria-label="Revelar">👁️ Revelar</button>
+        </div>
+        <p class="shortcut-hint mt-2">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua</p>
+    </div>
+
+    <!-- ── Conteúdo rolável ── -->
+    <div class="flex-1 overflow-y-auto space-y-2 pr-0.5">
+
+        <!-- ══ CENA ══ -->
+        <div class="acc-section mestre-only">
+            <button class="acc-header open" onclick="toggleAcc(this)" aria-expanded="true">
+                <span>🗺️ Cena</span>
+                <span class="acc-arrow">▶</span>
+            </button>
+            <div class="acc-body open space-y-2">
+                <button onclick="document.getElementById('f-map').click()"
+                    class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all"
+                    aria-label="Alterar mapa">
+                    🗺️ Alterar Mapa
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="openTokenSizeModal()"
+                        class="flex-1 bg-slate-800/60 border border-slate-700 py-2 rounded-xl text-[10px] font-bold text-slate-300 hover:bg-slate-700 transition-all"
+                        aria-label="Adicionar token">
+                        🧙 Novo Token
+                    </button>
+                    <button onclick="syncCamera()"
+                        class="flex-1 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 py-2 rounded-xl text-[10px] font-bold hover:bg-emerald-600 hover:text-white transition-all"
+                        aria-label="Sincronizar câmera">
+                        📡 Sync Câmera
+                    </button>
+                </div>
+
+                <!-- Camadas -->
+                <div class="bg-black/20 rounded-xl p-2.5 border border-white/5">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">🏗️ Camada Ativa</p>
+                        <div class="flex gap-1">
+                            <button onclick="setLayer(0)" id="btn-layer-0" class="tool-btn active text-[9px] px-2.5 py-1" title="Térreo">0</button>
+                            <button onclick="setLayer(1)" id="btn-layer-1" class="tool-btn text-[9px] px-2.5 py-1" title="1º Andar">1</button>
+                            <button onclick="setLayer(2)" id="btn-layer-2" class="tool-btn text-[9px] px-2.5 py-1" title="2º Andar">2</button>
+                        </div>
+                    </div>
+                    <p class="text-[7.5px] text-slate-600">Tokens de outras camadas ficam ocultos para jogadores.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ NÉVOA DE GUERRA ══ -->
+        <div class="acc-section mestre-only">
+            <button class="acc-header" onclick="toggleAcc(this)" aria-expanded="false">
+                <span>🌫️ Névoa de Guerra</span>
+                <span class="acc-arrow">▶</span>
+            </button>
+            <div class="acc-body space-y-2">
+                <div class="flex gap-2">
+                    <button onclick="clearFog()"
+                        class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-blue-900/40 hover:text-blue-300 hover:border-blue-700/40 transition-all">
+                        👁️ Limpar Névoa
+                    </button>
+                    <button onclick="fillFog()"
+                        class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
+                        🌑 Cobrir Tudo
+                    </button>
+                </div>
+                <p class="text-[7.5px] text-slate-600 text-center">Use as ferramentas Névoa / Revelar para pintar célula a célula.</p>
+            </div>
+        </div>
+
+        <!-- ══ GRADE & MAPA ══ -->
+        <div class="acc-section mestre-only">
+            <button class="acc-header" onclick="toggleAcc(this)" aria-expanded="false">
+                <span>⚙️ Grade & Mapa</span>
+                <span class="acc-arrow">▶</span>
+            </button>
+            <div class="acc-body space-y-3">
+
+                <!-- Tipo de grade -->
+                <div>
+                    <div class="flex justify-between text-[8px] font-bold text-slate-500 mb-1.5 uppercase">
+                        Tipo: <span id="grid-type-label" class="text-indigo-400">Quadrado</span>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="toggleGridType('square')" id="btn-grid-square" class="tool-btn active flex-1 text-[9px]">⬜ Quad.</button>
+                        <button onclick="toggleGridType('hex-v')"  id="btn-grid-hex-v"  class="tool-btn flex-1 text-[9px]">⬡ Hex V</button>
+                        <button onclick="toggleGridType('hex-h')"  id="btn-grid-hex-h"  class="tool-btn flex-1 text-[9px]">⬡ Hex H</button>
+                    </div>
+                </div>
+
+                <!-- Tamanho da grade -->
+                <div>
+                    <div class="flex justify-between text-[8px] font-bold text-slate-500 mb-1 uppercase">
+                        Tamanho da Grade <span id="grid-txt" class="text-indigo-400">60px</span>
+                    </div>
+                    <input type="range" id="grid-range" min="30" max="150" value="60"
+                        class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                        aria-label="Tamanho da grade">
+                </div>
+
+                <!-- Opacidade -->
+                <div>
+                    <div class="flex justify-between text-[8px] font-bold text-slate-500 mb-1 uppercase">
+                        Opacidade <span id="opacity-txt" class="text-indigo-400">20%</span>
+                    </div>
+                    <input type="range" id="opacity-range" min="0" max="100" value="20"
+                        class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                        aria-label="Opacidade da grade">
+                </div>
+
+                <!-- Tamanho do mapa -->
+                <div>
+                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5">Dimensões do Mapa</p>
+                    <div class="space-y-1.5">
+                        <div class="size-row" id="row-width">
+                            <span class="text-[9px] text-slate-500 w-10 uppercase flex-shrink-0">Larg.</span>
+                            <button class="map-size-btn" onclick="resizeMap('width',-100)" aria-label="Diminuir largura">−</button>
+                            <span id="map-w-txt" class="text-[9px] text-indigo-400 font-bold flex-1 text-center">1200px</span>
+                            <button class="map-size-btn" onclick="resizeMap('width',100)"  aria-label="Aumentar largura">+</button>
+                        </div>
+                        <div class="size-row" id="row-height">
+                            <span class="text-[9px] text-slate-500 w-10 uppercase flex-shrink-0">Alt.</span>
+                            <button class="map-size-btn" onclick="resizeMap('height',-100)" aria-label="Diminuir altura">−</button>
+                            <span id="map-h-txt" class="text-[9px] text-indigo-400 font-bold flex-1 text-center">800px</span>
+                            <button class="map-size-btn" onclick="resizeMap('height',100)"  aria-label="Aumentar altura">+</button>
+                        </div>
+                        <p class="text-[7.5px] text-slate-600 text-center">↕ Roda do mouse nas linhas acima</p>
+                    </div>
+                </div>
+
+                <!-- Área de risco -->
+                <div class="pt-2 border-t border-slate-800/60">
+                    <p class="text-[8px] font-bold text-red-500/80 uppercase tracking-widest mb-1.5">⚠️ Área de Risco</p>
+                    <div class="flex gap-2">
+                        <button onclick="globalReset()"
+                            class="flex-1 bg-red-900/20 border border-red-700/30 text-red-400 py-1.5 rounded-xl text-[9px] font-bold hover:bg-red-700 hover:text-white transition-all">
+                            🗑️ Reset Geral
+                        </button>
+                        <button onclick="undoReset()" id="btn-undo-reset"
+                            class="flex-1 bg-slate-800 border border-slate-700 text-slate-400 py-1.5 rounded-xl text-[9px] font-bold hover:bg-slate-700 transition-all"
+                            style="display:none;">
+                            ↩️ Desfazer
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ══ INICIATIVA ══ -->
+        <div class="acc-section">
+            <button class="acc-header" onclick="toggleAcc(this)" aria-expanded="false">
+                <span>⚡ Iniciativa</span>
+                <span class="acc-arrow">▶</span>
+            </button>
+            <div class="acc-body space-y-2">
+                <button onclick="openInitSetupModal()"
+                    class="mestre-only w-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">
+                    📋 Preparar Iniciativa
+                </button>
+                <button onclick="toggleFloatingInit()" id="btn-toggle-init"
+                    class="w-full bg-slate-800/50 border border-slate-700 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all"
+                    style="display:none;">
+                    👁️ Mostrar Painel de Turnos
+                </button>
+            </div>
+        </div>
+
+        <!-- ══ DADOS ══ -->
+        <div class="acc-section">
+            <button class="acc-header open" onclick="toggleAcc(this)" aria-expanded="true">
+                <span>🎲 Rolagem de Dados</span>
+                <span class="acc-arrow">▶</span>
+            </button>
+            <div class="acc-body open space-y-2">
+
+                <!-- Notação avançada -->
+                <div class="bg-black/20 border border-white/5 rounded-xl p-2 space-y-1.5">
+                    <p class="text-[8px] font-bold text-slate-500 uppercase">Notação Avançada</p>
+                    <div class="flex gap-1.5">
+                        <input type="text" id="dice-notation-input"
+                            placeholder="ex: 2d20kh1+5 / 4d6d1"
+                            class="flex-1 bg-slate-800/70 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px] text-slate-300 outline-none focus:border-indigo-500 font-mono"
+                            aria-label="Notação de dados">
+                        <button onclick="rollNotation()"
+                            class="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-bold hover:bg-indigo-600 hover:text-white transition-all"
+                            aria-label="Rolar notação">🎲</button>
+                    </div>
+                    <p class="text-[7px] text-slate-600">kh = maior · kl = menor · d = descartar menor · dh = descartar maior</p>
+                </div>
+
+                <!-- Tipos de dado -->
+                <div class="flex flex-wrap gap-1.5" id="dice-type-grid">
+                    <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d4</button>
+                    <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d6</button>
+                    <button onclick="setDiceType(8)"   id="dt-8"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d8</button>
+                    <button onclick="setDiceType(10)"  id="dt-10"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d10</button>
+                    <button onclick="setDiceType(12)"  id="dt-12"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d12</button>
+                    <button onclick="setDiceType(20)"  id="dt-20"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black active">d20</button>
+                    <button onclick="setDiceType(100)" id="dt-100" class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d%</button>
+                </div>
+
+                <!-- Qtd e bônus -->
+                <div class="flex gap-2">
+                    <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
+                        <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Qtd.</p>
+                        <div class="flex items-center justify-between gap-1">
+                            <button onclick="changeDiceCount(-1)" class="map-size-btn">−</button>
+                            <span id="dice-count-txt" class="text-xs font-black text-indigo-400">1</span>
+                            <button onclick="changeDiceCount(1)"  class="map-size-btn">+</button>
+                        </div>
+                    </div>
+                    <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
+                        <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Bônus</p>
+                        <div class="flex items-center justify-between gap-1">
+                            <button onclick="changeDiceBonus(-1)" class="map-size-btn">−</button>
+                            <span id="dice-bonus-txt" class="text-xs font-black text-emerald-400">+0</span>
+                            <button onclick="changeDiceBonus(1)"  class="map-size-btn">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botão rolar -->
+                <div class="text-center">
+                    <p id="dice-preview" class="text-[9px] text-slate-500 mb-1.5">1d20</p>
+                    <button onclick="roll()"
+                        class="w-full dice-btn py-2.5 rounded-xl text-[11px] font-black hover:bg-indigo-600 hover:text-white"
+                        style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#a5b4fc;"
+                        aria-label="Rolar dados">🎲 ROLAR</button>
+                </div>
+
+                <!-- Histórico -->
+                <div class="flex items-center justify-between">
+                    <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Histórico</p>
+                    <button onclick="clearDiceHistory()"
+                        class="text-[8px] font-bold px-2 py-0.5 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-500 hover:bg-red-900/40 hover:text-red-400 hover:border-red-700/40 transition-all">
+                        🗑 Limpar
+                    </button>
+                </div>
+                <div id="dice-history"
+                    class="bg-black/20 rounded-2xl p-3 h-36 overflow-y-auto space-y-1.5 border border-white/5"
+                    role="log" aria-live="polite" aria-label="Histórico de rolagens"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Presença Online (fixo no rodapé) ── -->
+    <div class="mt-3 pt-3 border-t border-slate-800/40">
+        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-2">🟢 Online Agora</p>
+        <div class="presence-panel">
+            <div id="presence-list">
+                <p class="text-[9px] text-slate-600 text-center py-1">Nenhum usuário.</p>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="f-map"   class="hidden" accept="image/*,video/webm">
+    <input type="file" id="f-token" class="hidden" accept="image/*">
+</div>
+
+<div id="layer-indicator" aria-label="Camada ativa">Camada: <span id="layer-num">0</span></div>
+
+<div id="viewport">
+    <div id="map-container">
+        <img id="active-map" alt="Mapa da cena">
+        <div id="grid-overlay"></div>
+        <canvas id="hex-grid-canvas"></canvas>
+        <div id="tokens-layer"></div>
+        <canvas id="fog-canvas"></canvas>
+        <canvas id="ruler-canvas"></canvas>
+    </div>
+</div>
+
+<script>
+    function toggleAcc(btn) {
+        const body = btn.nextElementSibling;
+        const open = body.classList.toggle('open');
+        btn.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open);
+    }
+</script>
+<script type="module" src="script.js"></script>
+
+</body>
+</html>
