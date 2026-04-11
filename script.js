@@ -3616,16 +3616,73 @@
 
     /* Estado interno do modal de criação de preset */
 
-    const presetState = {
+        const presetState = {
 
-        size: 1,
+            size: 1,
 
-        type: 'PC',
+            type: 'PC',
 
-        color: '#ffffff',
+            color: '#ffffff',
 
+            imageUrl: null
+        };
+
+        const mapPresetState = {
+            imageUrl: null
+        };
+
+        window.openMapPresetModal = () => {
+            const nameInput = _el('map-preset-name-input');
+            const modal = _el('map-preset-modal');
+            if (!nameInput || !modal) return;
+            nameInput.value = '';
+            mapPresetState.imageUrl = null;
+            _el('map-preset-img-preview').innerHTML = '<span id="map-preset-img-placeholder">🗺️</span>';
+            modal.style.display = 'flex';
+        };
+
+        window.closeMapPresetModal = () => {
+            _el('map-preset-modal').style.display = 'none';
+        };
+
+        _el('f-map-preset').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                mapPresetState.imageUrl = ev.target.result;
+                _el('map-preset-img-preview').innerHTML = `<img src="${ev.target.result}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        };
+
+    const mapPresetState = {
         imageUrl: null
+    };
 
+    window.openMapPresetModal = () => {
+        const nameInput = _el('map-preset-name-input');
+        const modal = _el('map-preset-modal');
+        if (!nameInput || !modal) return;
+        nameInput.value = '';
+        mapPresetState.imageUrl = null;
+        _el('map-preset-img-preview').innerHTML = '<span id="map-preset-img-placeholder">🗺️</span>';
+        modal.style.display = 'flex';
+    };
+
+    window.closeMapPresetModal = () => {
+        _el('map-preset-modal').style.display = 'none';
+    };
+
+    _el('f-map-preset').onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            mapPresetState.imageUrl = ev.target.result;
+            _el('map-preset-img-preview').innerHTML = `<img src="${ev.target.result}" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
     };
 
     /* ─ Abrir / Fechar Modal ─ */
