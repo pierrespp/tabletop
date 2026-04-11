@@ -31,6 +31,8 @@
 
         isFogPainting: false, isRulerActive: false,
 
+        fogDragStart: null, fogDragMoved: false,
+
         pendingTokenSize: 1,
 
         activeLayer: 0,        /* camada ativa (0, 1, 2) */
@@ -795,7 +797,7 @@
 
     function saveFogDebounced() { clearTimeout(fogTimer); fogTimer = setTimeout(saveFogNow, 350); }
 
-    window.clearFog = async () => { state.fogCells.clear(); renderFog(); await saveFogNow(); showToast('👁️ Névoa removida', 'info'); };
+    window.clearFog = async () => { state.fogCells.clear(); renderFog(); await saveFogNow(); showToast('☀️ Mapa inteiro revelado', 'info'); };
 
     
 
@@ -815,11 +817,15 @@
 
         await saveFogNow();
 
-        showToast('🌑 Névoa aplicada ao mapa', 'info');
+        showToast('🌑 Mapa inteiro coberto por névoa', 'info');
 
     };
 
-    function applyFogAt(cx, cy) {
+    window.revealAllFog = window.clearFog;
+
+    window.coverAllFog = window.fillFog;
+
+    function fogCellFromClient(cx, cy) {
 
         const { x, y } = mapCoords(cx, cy);
 
@@ -827,11 +833,99 @@
 
         const r = Math.floor(y / state.gridSize);
 
-        if (c < 0 || r < 0 || c * state.gridSize > state.mapWidth || r * state.gridSize > state.mapHeight) return;
+        if (c < 0 || r < 0 || c * state.gridSize >= state.mapWidth || r * state.gridSize >= state.mapHeight) return null;
+
+        return { c, r };
+
+    }
+
+    function applyFogCellRect(startClientX, startClientY, endClientX, endClientY) {
+
+        const start = fogCellFromClient(startClientX, startClientY);
+
+        const end = fogCellFromClient(endClientX, endClientY);
+
+        if (!start || !end) return 0;
+
+        const c1 = Math.min(start.c, end.c);
+
+        const c2 = Math.max(start.c, end.c);
+
+        const r1 = Math.min(start.r, end.r);
+
+        const r2 = Math.max(start.r, end.r);
+
+        let changed = 0;
+
+        for (let c = c1; c <= c2; c++) {
+
+            for (let r = r1; r <= r2; r++) {
+
+                const k = cellKey(c, r);
+
+                if (state.mode === 'fog-paint' || state.mode === 'fog-box-paint') {
+
+                    if (!state.fogCells.has(k)) changed++;
+
+                    state.fogCells.add(k);
+
+                } else {
+
+                    if (state.fogCells.has(k)) changed++;
+
+                    state.fogCells.delete(k);
+
+                }
+
+            }
+
+        }
+
+        renderFog();
+
+        return changed;
+
+    }
+
+    function updateFogSelectionBox(cx, cy) {
+
+        if (!state.fogDragStart) return;
+
+        const dx = cx - state.fogDragStart.x;
+
+        const dy = cy - state.fogDragStart.y;
+
+        if (!state.fogDragMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) state.fogDragMoved = true;
+
+        if (!state.fogDragMoved) return;
+
+        const left = Math.min(state.fogDragStart.x, cx);
+
+        const top = Math.min(state.fogDragStart.y, cy);
+
+        const width = Math.abs(dx);
+
+        const height = Math.abs(dy);
+
+        const fogClass = (state.mode === 'fog-paint' || state.mode === 'fog-box-paint') ? 'fog-area-paint' : 'fog-area-erase';
+
+        selBox.className = fogClass;
+
+        selBox.style.cssText = `display:block;left:${left}px;top:${top}px;width:${width}px;height:${height}px;`;
+
+    }
+
+    function applyFogAt(cx, cy) {
+
+        const cell = fogCellFromClient(cx, cy);
+
+        if (!cell) return;
+
+        const { c, r } = cell;
 
         const k = cellKey(c, r);
 
-        if (state.mode === 'fog-paint') state.fogCells.add(k); else state.fogCells.delete(k);
+        if (state.mode === 'fog-paint' || state.mode === 'fog-box-paint') state.fogCells.add(k); else state.fogCells.delete(k);
 
         renderFog();
 
@@ -2437,12 +2531,12 @@
 
         state.mode = mode;
 
-        ['move', 'select', 'fog-paint', 'fog-erase'].forEach(m => _el('tool-' + m)?.classList.remove('active'));
+        ['move', 'select', 'fog-paint', 'fog-erase', 'fog-box-paint', 'fog-box-erase'].forEach(m => _el('tool-' + m)?.classList.remove('active'));
 
         _el('tool-' + mode)?.classList.add('active');
 
-        viewport.className = mode === 'fog-paint' ? 'fog-paint'
-                           : mode === 'fog-erase' ? 'fog-erase'
+        viewport.className = (mode === 'fog-paint' || mode === 'fog-box-paint') ? 'fog-paint'
+                           : (mode === 'fog-erase' || mode === 'fog-box-erase') ? 'fog-erase'
                            : mode === 'select'    ? 'select-mode'
                            : '';
 
@@ -3272,6 +3366,22 @@
 
         }
 
+        if (state.mode === 'fog-box-paint' || state.mode === 'fog-box-erase') {
+
+            state.isFogPainting = true;
+
+            state.fogDragStart = { x: e.clientX, y: e.clientY };
+
+            state.fogDragMoved = false;
+
+            selBox.style.display = 'none';
+
+            selBox.className = '';
+
+            return;
+
+        }
+
         /* Verifica se o clique foi no fundo (não num token) */
 
         const bg = e.target === viewport || e.target === container ||
@@ -3402,7 +3512,13 @@
 
     window.addEventListener('mousemove', (e) => {
 
-        if (state.isFogPainting) applyFogAt(e.clientX, e.clientY);
+        if (state.isFogPainting) {
+
+            if (state.mode === 'fog-box-paint' || state.mode === 'fog-box-erase') updateFogSelectionBox(e.clientX, e.clientY);
+
+            else applyFogAt(e.clientX, e.clientY);
+
+        }
 
         if (state.isRulerActive && state.ruler) {
 
@@ -3416,9 +3532,39 @@
 
     
 
-    window.addEventListener('mouseup', () => {
+    window.addEventListener('mouseup', (e) => {
 
-        if (state.isFogPainting) { state.isFogPainting = false; saveFogDebounced(); }
+        if (state.isFogPainting) {
+
+            if ((state.mode === 'fog-box-paint' || state.mode === 'fog-box-erase') && state.fogDragStart) {
+
+                if (state.fogDragMoved) {
+
+                    const count = applyFogCellRect(state.fogDragStart.x, state.fogDragStart.y, e.clientX, e.clientY);
+
+                    if (count > 0) showToast(`${count} célula${count > 1 ? 's' : ''} ${state.mode === 'fog-box-paint' ? 'escurecida' : 'revelada'}${count > 1 ? 's' : ''}`, 'info');
+
+                } else {
+
+                    applyFogAt(e.clientX, e.clientY);
+
+                }
+
+            }
+
+            state.isFogPainting = false;
+
+            state.fogDragStart = null;
+
+            state.fogDragMoved = false;
+
+            selBox.style.display = 'none';
+
+            selBox.className = '';
+
+            saveFogDebounced();
+
+        }
 
         if (state.isRulerActive) {
 
