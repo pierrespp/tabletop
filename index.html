@@ -245,9 +245,33 @@
             <button class="btn-save" onclick="savePreset()">💾 Salvar Ficha</button>
         </div>
     </div>
-</div>
+    </div>
 
-<div id="floating-init-panel">
+    <div id="map-preset-modal" class="modal-overlay">
+        <div class="modal-box" style="width:360px;max-width:95vw;">
+            <p class="modal-title">🗺️ Novo Mapa Salvo</p>
+
+            <div class="flex gap-4 items-start mb-4">
+                <div>
+                    <div class="preset-modal-img-preview" id="map-preset-img-preview" onclick="document.getElementById('f-map-preset').click()" title="Clique para escolher imagem">
+                        <span id="map-preset-img-placeholder">🗺️</span>
+                    </div>
+                    <p class="text-[7.5px] text-slate-600 text-center mt-1">Clique na imagem</p>
+                </div>
+                <div class="flex-1 space-y-2">
+                    <input type="text" id="map-preset-name-input" class="modal-input" placeholder="Nome do mapa..." maxlength="32">
+                    <p class="text-[7.5px] text-slate-500">As configurações de grade e tamanho atuais serão salvas.</p>
+                </div>
+            </div>
+
+            <div class="modal-btns mt-4">
+                <button class="btn-cancel" onclick="closeMapPresetModal()">Cancelar</button>
+                <button class="btn-save" onclick="saveMapPreset()">💾 Salvar Mapa</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="floating-init-panel">
     <div id="floating-init-header">
         <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">⚡ Ordem de Turnos</span>
         <button onclick="closeFloatingInit()" class="mestre-only text-slate-500 hover:text-red-400 text-sm font-bold">✕</button>
