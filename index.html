@@ -319,11 +319,15 @@
     <!-- ── Ferramentas fixas (só mestre) ── -->
     <div class="mestre-only tools-fixed mb-3">
         <p class="text-[8px] font-bold text-slate-600 uppercase tracking-widest mb-2">Ferramenta ativa</p>
-        <div class="tool-bar">
+        <div class="tool-bar mb-1.5">
             <button class="tool-btn active" id="tool-move"      onclick="setMode('move')"      aria-label="Mover">🖐 Mover</button>
-            <button class="tool-btn"        id="tool-select"    onclick="setMode('select')"    aria-label="Selecionar tokens">⬛ Sel.</button>
-            <button class="tool-btn"        id="tool-fog-paint" onclick="setMode('fog-paint')" aria-label="Pintar névoa">🌫️ Névoa</button>
-            <button class="tool-btn"        id="tool-fog-erase" onclick="setMode('fog-erase')" aria-label="Revelar">👁️ Revelar</button>
+            <button class="tool-btn"        id="tool-select"    onclick="setMode('select')"    aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
+        </div>
+        <div class="tool-bar">
+            <button class="tool-btn"        id="tool-fog-paint" onclick="setMode('fog-paint')" title="Pintar 1x1">🌫️ Névoa</button>
+            <button class="tool-btn"        id="tool-fog-erase" onclick="setMode('fog-erase')" title="Revelar 1x1">👁️ Revelar</button>
+            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Névoa em Área">⬛ Box Névoa</button>
+            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Revelar em Área">⬜ Box Rev.</button>
         </div>
         <p class="shortcut-hint mt-2">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua &nbsp;·&nbsp; Sel. = caixa de seleção</p>
     </div>
@@ -415,16 +419,16 @@
             </button>
             <div class="acc-body space-y-2">
                 <div class="flex gap-2">
-                    <button onclick="clearFog()"
+                    <button onclick="revealAllFog()"
                         class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-blue-900/40 hover:text-blue-300 hover:border-blue-700/40 transition-all">
-                        👁️ Limpar Névoa
+                        ☀️ Revelar Tudo
                     </button>
-                    <button onclick="fillFog()"
+                    <button onclick="coverAllFog()"
                         class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                        🌑 Cobrir Tudo
+                        🌑 Escurecer Tudo
                     </button>
                 </div>
-                <p class="text-[7.5px] text-slate-600 text-center">Use as ferramentas Névoa / Revelar para pintar célula a célula.</p>
+                <p class="text-[7.5px] text-slate-600 text-center">Use Névoa / Revelar com clique para 1 quadrado ou arraste para selecionar uma área inteira.</p>
             </div>
         </div>
 
