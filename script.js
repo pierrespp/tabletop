@@ -1437,7 +1437,7 @@
 
         el.addEventListener('mousedown', (e) => {
 
-            if (e.button !== 0 || e.shiftKey || e.ctrlKey) return;
+            if (e.button !== 0 || e.ctrlKey) return;
 
             if (state.mode !== 'move' && state.mode !== 'select') return;
 
@@ -1491,6 +1491,10 @@
 
                     el.parentElement.classList.add('selected');
 
+                          /* No modo seleção, primeiro clique só seleciona.
+                              Arraste só é permitido em token já selecionado. */
+                          return;
+
                 }
 
             } else {
@@ -1531,13 +1535,23 @@
 
             let hasMoved = false;
 
+            let dragStarted = false;
+
             const onMove = (ev) => {
 
                 const dx = (ev.clientX - sx) / state.zoom;
 
                 const dy = (ev.clientY - sy) / state.zoom;
 
-                if (Math.abs(dx) > 2 || Math.abs(dy) > 2) hasMoved = true;
+                if (!dragStarted) {
+
+                    if (Math.abs(dx) <= 2 && Math.abs(dy) <= 2) return;
+
+                    dragStarted = true;
+
+                    hasMoved = true;
+
+                }
 
                 tokensToMove.forEach(tid => {
 
@@ -3620,11 +3634,21 @@
 
         /* Reset do form */
 
-        _el('preset-name-input').value = '';
+        const nameInput = _el('preset-name-input');
 
-        _el('preset-hp-input').value   = '';
+        const hpInput = _el('preset-hp-input');
 
-        _el('preset-mana-input').value = '';
+        const manaInput = _el('preset-mana-input');
+
+        const modal = _el('preset-modal');
+
+        if (!nameInput || !hpInput || !manaInput || !modal) return;
+
+        nameInput.value = '';
+
+        hpInput.value   = '';
+
+        manaInput.value = '';
 
         presetState.size     = 1;
 
@@ -3638,7 +3662,7 @@
 
         document.querySelectorAll('.preset-size-btn').forEach(b => b.classList.remove('active'));
 
-        document.querySelector('.preset-size-btn[data-size="1"]').classList.add('active');
+        document.querySelector('.preset-size-btn[data-size="1"]')?.classList.add('active');
 
         /* Reset botões de tipo */
 
@@ -3650,19 +3674,33 @@
 
         document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
 
-        document.querySelector('.color-swatch[data-color="#ffffff"]').classList.add('selected');
+        document.querySelector('.color-swatch[data-color="#ffffff"]')?.classList.add('selected');
 
         /* Reset preview da imagem */
 
         const preview = _el('preset-img-preview');
 
-        preview.innerHTML = '<span id="preset-img-placeholder">🧙</span>';
+        if (preview) preview.innerHTML = '<span id="preset-img-placeholder">🧙</span>';
 
-        _el('preset-modal').classList.add('open');
+        modal.classList.add('open');
 
-        setTimeout(() => _el('preset-name-input').focus(), 50);
+        setTimeout(() => nameInput.focus(), 50);
 
     };
+
+    const presetOpenBtn = _el('btn-open-preset-modal');
+
+    if (presetOpenBtn) {
+
+        presetOpenBtn.addEventListener('click', (e) => {
+
+            e.preventDefault();
+
+            window.openPresetModal();
+
+        });
+
+    }
 
     window.closePresetModal = () => {
 
@@ -3682,7 +3720,7 @@
 
         document.querySelectorAll('.preset-size-btn').forEach(b => b.classList.remove('active'));
 
-        document.querySelector(`.preset-size-btn[data-size="${size}"]`).classList.add('active');
+        document.querySelector(`.preset-size-btn[data-size="${size}"]`)?.classList.add('active');
 
     };
 
@@ -4099,4 +4137,3 @@
         state.selectedTokenIds.clear();
 
     }
-
