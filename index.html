@@ -324,8 +324,8 @@
             <button class="tool-btn"        id="tool-select"    onclick="setMode('select')"    aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
         </div>
         <div class="tool-bar">
-            <button class="tool-btn"        id="tool-fog-paint" onclick="coverAllFog(); setMode('move')" title="Escurecer o mapa todo">🌫️ Névoa</button>
-            <button class="tool-btn"        id="tool-fog-erase" onclick="revealAllFog(); setMode('move')" title="Revelar o mapa todo">👁️ Revelar</button>
+            <button class="tool-btn"        id="tool-fog-paint" onclick="fillFog(); setMode('move')" title="Escurecer o mapa todo">🌫️ Névoa</button>
+            <button class="tool-btn"        id="tool-fog-erase" onclick="clearFog(); setMode('move')" title="Revelar o mapa todo">👁️ Revelar</button>
             <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Selecionar área para aplicar névoa">⬛ Selecionar Névoa</button>
             <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Selecionar área para revelar">⬜ Selecionar Rev.</button>
         </div>
@@ -419,11 +419,11 @@
             </button>
             <div class="acc-body space-y-2">
                 <div class="flex gap-2">
-                    <button onclick="revealAllFog()"
+                    <button onclick="clearFog()"
                         class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-blue-900/40 hover:text-blue-300 hover:border-blue-700/40 transition-all">
                         ☀️ Revelar Tudo
                     </button>
-                    <button onclick="coverAllFog()"
+                    <button onclick="fillFog()"
                         class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
                         🌑 Escurecer Tudo
                     </button>
