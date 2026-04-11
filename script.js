@@ -841,19 +841,27 @@
 
     function applyFogCellRect(startClientX, startClientY, endClientX, endClientY) {
 
-        const start = fogCellFromClient(startClientX, startClientY);
+        const p1 = mapCoords(startClientX, startClientY);
 
-        const end = fogCellFromClient(endClientX, endClientY);
+        const p2 = mapCoords(endClientX, endClientY);
 
-        if (!start || !end) return 0;
+        const minX = Math.max(0, Math.min(p1.x, p2.x));
 
-        const c1 = Math.min(start.c, end.c);
+        const maxX = Math.min(state.mapWidth - 1, Math.max(p1.x, p2.x));
 
-        const c2 = Math.max(start.c, end.c);
+        const minY = Math.max(0, Math.min(p1.y, p2.y));
 
-        const r1 = Math.min(start.r, end.r);
+        const maxY = Math.min(state.mapHeight - 1, Math.max(p1.y, p2.y));
 
-        const r2 = Math.max(start.r, end.r);
+        if (minX > state.mapWidth || minY > state.mapHeight || maxX < 0 || maxY < 0) return 0;
+
+        const c1 = Math.floor(minX / state.gridSize);
+
+        const c2 = Math.floor(maxX / state.gridSize);
+
+        const r1 = Math.floor(minY / state.gridSize);
+
+        const r2 = Math.floor(maxY / state.gridSize);
 
         let changed = 0;
 
@@ -863,7 +871,7 @@
 
                 const k = cellKey(c, r);
 
-                if (state.mode === 'fog-paint' || state.mode === 'fog-box-paint') {
+                if (state.mode === 'fog-box-paint') {
 
                     if (!state.fogCells.has(k)) changed++;
 
@@ -907,7 +915,7 @@
 
         const height = Math.abs(dy);
 
-        const fogClass = (state.mode === 'fog-paint' || state.mode === 'fog-box-paint') ? 'fog-area-paint' : 'fog-area-erase';
+        const fogClass = state.mode === 'fog-box-paint' ? 'fog-area-paint' : 'fog-area-erase';
 
         selBox.className = fogClass;
 
@@ -2535,8 +2543,8 @@
 
         _el('tool-' + mode)?.classList.add('active');
 
-        viewport.className = (mode === 'fog-paint' || mode === 'fog-box-paint') ? 'fog-paint'
-                           : (mode === 'fog-erase' || mode === 'fog-box-erase') ? 'fog-erase'
+        viewport.className = mode === 'fog-box-paint' ? 'fog-paint'
+                           : mode === 'fog-box-erase' ? 'fog-erase'
                            : mode === 'select'    ? 'select-mode'
                            : '';
 
@@ -3356,19 +3364,11 @@
 
         }
 
-        /* Névoa */
-
-        if (state.mode === 'fog-paint' || state.mode === 'fog-erase') {
-
-            state.isFogPainting = true;
-
-            applyFogAt(e.clientX, e.clientY); return;
-
-        }
-
         if (state.mode === 'fog-box-paint' || state.mode === 'fog-box-erase') {
 
-            state.isFogPainting = true;
+            if (state.role !== 'mestre') return;
+
+            e.preventDefault();
 
             state.fogDragStart = { x: e.clientX, y: e.clientY };
 
@@ -3377,6 +3377,40 @@
             selBox.style.display = 'none';
 
             selBox.className = '';
+
+            const onMove = (ev) => updateFogSelectionBox(ev.clientX, ev.clientY);
+
+            const onUp = async (ev) => {
+
+                window.removeEventListener('mousemove', onMove);
+
+                window.removeEventListener('mouseup', onUp);
+
+                let count = 0;
+
+                if (state.fogDragStart) count = applyFogCellRect(state.fogDragStart.x, state.fogDragStart.y, ev.clientX, ev.clientY);
+
+                state.fogDragStart = null;
+
+                state.fogDragMoved = false;
+
+                selBox.style.display = 'none';
+
+                selBox.className = '';
+
+                if (count > 0) {
+
+                    await saveFogNow();
+
+                    showToast(`${count} célula${count > 1 ? 's' : ''} ${state.mode === 'fog-box-paint' ? 'escurecida' : 'revelada'}${count > 1 ? 's' : ''}`, 'info');
+
+                }
+
+            };
+
+            window.addEventListener('mousemove', onMove);
+
+            window.addEventListener('mouseup', onUp);
 
             return;
 
