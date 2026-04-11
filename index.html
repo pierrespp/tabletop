@@ -324,10 +324,10 @@
             <button class="tool-btn"        id="tool-select"    onclick="setMode('select')"    aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
         </div>
         <div class="tool-bar">
-            <button class="tool-btn"        id="tool-fog-paint" onclick="setMode('fog-paint')" title="Pintar 1x1">🌫️ Névoa</button>
-            <button class="tool-btn"        id="tool-fog-erase" onclick="setMode('fog-erase')" title="Revelar 1x1">👁️ Revelar</button>
-            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Névoa em Área">⬛ Box Névoa</button>
-            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Revelar em Área">⬜ Box Rev.</button>
+            <button class="tool-btn"        id="tool-fog-paint" onclick="coverAllFog(); setMode('move')" title="Escurecer o mapa todo">🌫️ Névoa</button>
+            <button class="tool-btn"        id="tool-fog-erase" onclick="revealAllFog(); setMode('move')" title="Revelar o mapa todo">👁️ Revelar</button>
+            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Selecionar área para aplicar névoa">⬛ Selecionar Névoa</button>
+            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Selecionar área para revelar">⬜ Selecionar Rev.</button>
         </div>
         <p class="shortcut-hint mt-2">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua &nbsp;·&nbsp; Sel. = caixa de seleção</p>
     </div>
@@ -428,7 +428,7 @@
                         🌑 Escurecer Tudo
                     </button>
                 </div>
-                <p class="text-[7.5px] text-slate-600 text-center">Use Névoa / Revelar com clique para 1 quadrado ou arraste para selecionar uma área inteira.</p>
+                <p class="text-[7.5px] text-slate-600 text-center">Névoa / Revelar afetam o mapa inteiro. Use Selecionar Névoa / Selecionar Rev. para arrastar uma área.</p>
             </div>
         </div>
 
