@@ -644,12 +644,45 @@
 </div>
 
 <script>
+    window.refreshAccordionHeights = function refreshAccordionHeights() {
+        document.querySelectorAll('.acc-body.open').forEach((body) => {
+            body.style.maxHeight = body.scrollHeight + 'px';
+        });
+    };
+
     function toggleAcc(btn) {
         const body = btn.nextElementSibling;
-        const open = body.classList.toggle('open');
-        btn.classList.toggle('open', open);
-        btn.setAttribute('aria-expanded', open);
+
+        if (!body) return;
+
+        const open = !body.classList.contains('open');
+
+        if (open) {
+            body.classList.add('open');
+            btn.classList.add('open');
+            btn.setAttribute('aria-expanded', 'true');
+            body.style.maxHeight = '0px';
+
+            requestAnimationFrame(() => {
+                body.style.maxHeight = body.scrollHeight + 'px';
+            });
+
+            return;
+        }
+
+        body.style.maxHeight = body.scrollHeight + 'px';
+        btn.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+
+        requestAnimationFrame(() => {
+            body.classList.remove('open');
+            body.style.maxHeight = '0px';
+        });
     }
+
+    requestAnimationFrame(() => {
+        window.refreshAccordionHeights();
+    });
 </script>
 <script type="module" src="script.js"></script>
 
