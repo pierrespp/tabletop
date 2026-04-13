@@ -411,7 +411,7 @@ function applyMapForCurrentLayer() {
 
 ═══════════════════════════════════════════════════════════════ */
 
-function snapToGrid(v) { return Math.floor(v / state.gridSize) * state.gridSize; }
+function snapToGrid(v) { return Math.round(v / state.gridSize) * state.gridSize; }
 
 /* Snap para grade hexagonal — retorna { x, y } já snappados */
 
@@ -1341,7 +1341,15 @@ function updateTokenDOM(id, data) {
 
         barsContainer.appendChild(manaBar);
 
-        el.appendChild(barsContainer);
+        wrapper.appendChild(el);
+
+        /* Info abaixo do token (nome + barras) — fora do círculo */
+
+        const infoContainer = document.createElement('div');
+
+        infoContainer.className = 'token-info';
+
+        infoContainer.id = 'info-' + id;
 
         /* Nome */
 
@@ -1349,7 +1357,11 @@ function updateTokenDOM(id, data) {
 
         nameEl.className = 'token-name'; nameEl.id = 'name-' + id;
 
-        el.appendChild(nameEl);
+        infoContainer.appendChild(nameEl);
+
+        infoContainer.appendChild(barsContainer);
+
+        wrapper.appendChild(infoContainer);
 
         /* Badge de controle do jogador */
 
@@ -1359,7 +1371,7 @@ function updateTokenDOM(id, data) {
 
         badge.title = 'Jogadores podem controlar';
 
-        el.appendChild(badge);
+        wrapper.appendChild(badge);
 
         /* Ícones de Status */
 
@@ -1367,9 +1379,7 @@ function updateTokenDOM(id, data) {
 
         statusRing.className = 'token-status-ring'; statusRing.id = 'status-ring-' + id;
 
-        el.appendChild(statusRing);
-
-        wrapper.appendChild(el);
+        wrapper.appendChild(statusRing);
 
         attachTokenEvents(el, id);
 
@@ -1715,36 +1725,39 @@ function attachTokenEvents(el, id) {
 
                 const size = parseFloat(tokenEl?.dataset.tokenSize || '1');
 
-                let snapped;
+                /* Posição visual atual do wrapper (sem offset de borda) */
 
-                if (tid === id && ev) {
+                const rawLeft = (parseFloat(w.style.left) || 0) - 2;
 
-                    const drop = mapCoords(ev.clientX, ev.clientY);
+                const rawTop  = (parseFloat(w.style.top)  || 0) - 2;
 
-                    snapped = snapHex(
-                        drop.x - (state.gridSize * size) / 2,
-                        drop.y - (state.gridSize * size) / 2
-                    );
+                /* Centro do token em coordenadas de mapa */
 
-                } else {
+                const halfSpan = (state.gridSize * size) / 2;
 
-                    const currentLeft = (parseFloat(w.style.left) || 0) - 2;
+                const cx = rawLeft + halfSpan;
 
-                    const currentTop = (parseFloat(w.style.top) || 0) - 2;
+                const cy = rawTop  + halfSpan;
 
-                    snapped = snapTokenDropPosition(currentLeft, currentTop, size);
+                /* Snap: encontra célula mais próxima ao centro do token */
 
-                }
+                const snappedFinal = snapHex(
 
-                w.style.left = (snapped.x + 2) + 'px';
+                    cx - halfSpan,
 
-                w.style.top  = (snapped.y + 2) + 'px';
+                    cy - halfSpan
+
+                );
+
+                w.style.left = (snappedFinal.x + 2) + 'px';
+
+                w.style.top  = (snappedFinal.y + 2) + 'px';
 
                 try {
 
                     const { db, appId, updateDoc, doc } = window.vtt;
 
-                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', tid), { x: snapped.x, y: snapped.y });
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', tid), { x: snappedFinal.x, y: snappedFinal.y });
 
                 } catch (err) { console.error('[VTT] Erro ao mover token:', err); }
 
@@ -1974,15 +1987,33 @@ function openHpModal(id) {
 
     hpTokenId = id;
 
-    const td = tokenDataMap[id] || {};
+    /* Lê valores atuais do Firestore para pré-preencher */
 
-    _el('hp-current-input').value   = '';
+    const { db, appId, doc, getDoc } = window.vtt;
 
-    _el('hp-max-input').value       = '';
+    getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id)).then(snap => {
 
-    _el('mana-current-input').value = '';
+        const d = snap.exists() ? snap.data() : {};
 
-    _el('mana-max-input').value     = '';
+        _el('hp-current-input').value   = d.hp     ?? '';
+
+        _el('hp-max-input').value       = d.maxHp  ?? '';
+
+        _el('mana-current-input').value = d.mana   ?? '';
+
+        _el('mana-max-input').value     = d.maxMana ?? '';
+
+    }).catch(() => {
+
+        _el('hp-current-input').value   = '';
+
+        _el('hp-max-input').value       = '';
+
+        _el('mana-current-input').value = '';
+
+        _el('mana-max-input').value     = '';
+
+    });
 
     _el('hp-modal').classList.add('open');
 
