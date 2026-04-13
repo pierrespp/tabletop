@@ -192,7 +192,14 @@ html, body {
 #grid-overlay {
     position: absolute;
     top: 0; left: 0;
+    width: 100%; height: 100%;
     pointer-events: none;
+    background-image:
+        linear-gradient(to right, rgba(255,255,255,0.15) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.15) 1px, transparent 1px);
+}
+#grid-overlay.hex-mode {
+    background-image: none;
 }
 
 #hex-grid-canvas,
@@ -271,7 +278,6 @@ html, body {
 .acc-section {
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 14px;
-    overflow: hidden;
     background: rgba(0,0,0,0.12);
     transition: border-color var(--transition);
 }
@@ -1300,6 +1306,13 @@ html, body {
     cursor: pointer;
     user-select: none;
     transition: filter 0.15s ease, transform 0.12s ease;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    overflow: hidden;
 }
 
 .token:hover { filter: brightness(1.15); }
