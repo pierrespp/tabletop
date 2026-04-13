@@ -1032,9 +1032,20 @@ html, body {
     box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
     display: none;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
     user-select: none;
     animation: panel-in 0.22s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+
+/* Recorta bordas arredondadas internamente sem afetar o resizer */
+#floating-init-panel > *:not(#floating-init-resizer) {
+    overflow: hidden;
+}
+#floating-init-header {
+    border-radius: 18px 18px 0 0;
+}
+#floating-init-panel > *:last-child:not(#floating-init-resizer) {
+    border-radius: 0 0 18px 18px;
 }
 
 #floating-init-panel.visible { display: flex; }
@@ -1292,16 +1303,32 @@ html, body {
 }
 #floating-init-panel .mestre-only button:active { transform: scale(0.97); }
 
-/* Resizer */
+/* Resizer — canto inferior direito */
 #floating-init-resizer {
-    height: 8px;
-    cursor: s-resize;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    cursor: se-resize;
     background: transparent;
+    /* Indicador visual de canto */
+    border-bottom: 3px solid rgba(255,255,255,0.12);
+    border-right:  3px solid rgba(255,255,255,0.12);
+    border-radius: 0 0 18px 0;
 }
 
-/* ── Botão no sidebar para mostrar painel ── */
+/* Botão "Preparar Iniciativa" dentro do painel */
+.floating-init-setup {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ── Botão de iniciativa na sidebar ── */
 #btn-toggle-init {
     transition: all var(--transition);
+    width: 100%;
+    margin-bottom: 4px;
 }
 #btn-toggle-init.panel-open {
     background: rgba(245,158,11,0.18) !important;
