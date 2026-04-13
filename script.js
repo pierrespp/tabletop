@@ -149,12 +149,7 @@ window.startVTT = async (role) => {
 
         await signInAnonymously(auth);
 
-<<<<<<< HEAD
         _el('setup-modal').style.display = 'none';
-=======
-            _el('sync-dot').classList.remove('sync-dot-offline');
-            _el('sync-dot').classList.add('sync-dot-online');
->>>>>>> 1e951c8 (Novo feito no VS)
 
         _el('sync-dot').classList.remove('sync-dot-offline');
 
@@ -2245,90 +2240,6 @@ window.rollAndStartInitiative = async () => {
 
 
 
-<<<<<<< HEAD
-=======
-            state.initiative.forEach(e => addInitSetupEntry(e.name, e.bonus, e.type));
-
-        } else {
-
-            addInitSetupEntry('', 0, 'PC');
-
-            // Cria um vazio por padrão
-
-        }
-
-        _el('init-setup-modal').classList.add('open');
-
-    };
-
-    window.closeInitSetupModal = () => _el('init-setup-modal').classList.remove('open');
-
-    window.addInitSetupEntry = (name = '', bonus = 0, type = 'NPC') => {
-
-        const id = Date.now() + Math.random();
-
-        initSetupEntries.push({ id });
-
-        
-
-        const div = document.createElement('div');
-
-        div.className = 'init-setup-row';
-
-        div.id = 'setup-row-' + id;
-
-        div.innerHTML = `
-
-            <input type="text" class="init-setup-input init-setup-name name-input" placeholder="Nome" value="${name}">
-
-            <input type="number" class="init-setup-input init-setup-bonus bonus-input" placeholder="Bônus" value="${bonus}">
-
-            <select class="init-setup-input init-setup-type type-input">
-
-                <option value="PC" ${type==='PC'?'selected':''}>Jogador</option>
-
-                <option value="NPC" ${type==='NPC'?'selected':''}>NPC</option>
-
-          
-
-            </select>
-
-            <button onclick="removeInitSetupEntry(${id})" class="init-setup-remove-btn">✕</button>
-
-        `;
-
-        _el('init-setup-list').appendChild(div);
-
-    };
-
-    window.removeInitSetupEntry = (id) => {
-
-        initSetupEntries = initSetupEntries.filter(e => e.id !== id);
-
-        _el('setup-row-' + id)?.remove();
-
-    };
-
-    window.rollAndStartInitiative = async () => {
-
-        const rows = document.querySelectorAll('.init-setup-row');
-
-        const rolledInitiative = [];
-
-        rows.forEach(row => {
-
-            const name = row.querySelector('.name-input').value.trim() || 'Desconhecido';
-
-            const bonus = parseInt(row.querySelector('.bonus-input').value) || 0;
-
-            const type = row.querySelector('.type-input').value;
-
-            const roll = Math.floor(Math.random() * 20) + 1 + bonus; // 1d20 + bônus
-
-            
-
-        
->>>>>>> 1e951c8 (Novo feito no VS)
 
             rolledInitiative.push({ id: Date.now() + Math.random(), name, bonus, type, roll });
 
@@ -3522,53 +3433,11 @@ viewport.addEventListener('mousedown', (e) => {
 
         const { x, y } = mapCoords(e.clientX, e.clientY);
 
-<<<<<<< HEAD
         sendPing(x, y);
-=======
-        if (!users.length) { list.innerHTML = '<p class="presence-empty">Nenhum usuário.</p>'; return;
->>>>>>> 1e951c8 (Novo feito no VS)
 
         setMode('move');
 
-<<<<<<< HEAD
         return;
-=======
-        users.sort((a, b) => (a.role === 'mestre' ? -1 : 1) - (b.role === 'mestre' ? -1 : 1));
-
-        const jogadores = users.filter(u => u.role !== 'mestre');
-
-        list.innerHTML = '';
-
-        users.forEach(user => {
-
-            const isMestre = user.role === 'mestre';
-
-            const isSelf   = presenceId && user.id === presenceId;
-
-            const label    = user.name || (isMestre ? 'Mestre' : 'Jogador ' + (jogadores.indexOf(user) + 1));
-
-            const div = document.createElement('div');
-
-            div.className = 'presence-entry';
-
-  
-
-            div.innerHTML =
-
-                '<div class="presence-dot ' + (isMestre ? 'mestre' : 'jogador') + '"></div>' +
-
-                '<span class="presence-name ' + (isMestre ? 'presence-name-mestre' : 'presence-name-jogador') + '">' +
-
-                label + (isSelf ? ' (você)' : '') + '</span>' +
-
-          
-
-                '<span class="presence-role">' + (isMestre ? 'Mestre' : 'Jogador') + '</span>';
-
-            list.appendChild(div);
-
-        });
->>>>>>> 1e951c8 (Novo feito no VS)
 
     }
 
@@ -3642,141 +3511,7 @@ viewport.addEventListener('mousedown', (e) => {
 
                 await saveFogNow();
 
-<<<<<<< HEAD
                 showToast(`${count} célula${count > 1 ? 's' : ''} ${boxMode === 'fog-box-paint' ? 'escurecida' : 'revelada'}${count > 1 ? 's' : ''}`, 'info');
-=======
-            img.onload = () => {
-
-                const canvas = document.createElement('canvas');
-
-                canvas.width = canvas.height = 128;
-
-                canvas.getContext('2d').drawImage(img, 0, 0, 128, 128);
-
-                let url = canvas.toDataURL('image/webp', 0.8);
-
-                if (!url.startsWith('data:image/webp')) {
-
-                    let q = 0.8;
-
-                    url = canvas.toDataURL('image/jpeg', q);
-
-                    while (url.length > 50000 && q > 0.2) { q -= 0.1; url = canvas.toDataURL('image/jpeg', q); }
-
-                }
-
-                presetState.imageUrl = url;
-
-                /* Atualiza preview no modal */
-
-                const preview = _el('preset-img-preview');
-
-                preview.innerHTML = `<img src="${url}" alt="preview">`;
-
-            };
-
-        };
-
-        reader.readAsDataURL(file);
-
-        e.target.value = '';
-
-    };
-
-    /* ─ Salvar Preset no Firestore ─ */
-
-    window.savePreset = async () => {
-
-        const name = _el('preset-name-input').value.trim();
-
-        if (!name) { _el('preset-name-input').focus(); return; }
-
-        const hp    = parseInt(_el('preset-hp-input').value)   || 0;
-
-        const mana  = parseInt(_el('preset-mana-input').value) || 0;
-
-        const data = {
-
-            name,
-
-            url:       presetState.imageUrl || '',
-
-            maxHp:     hp,
-
-            maxMana:   mana,
-
-            tokenSize: presetState.size,
-
-            type:      presetState.type,
-
-            color:     presetState.color,
-
-            createdAt: Date.now()
-
-        };
-
-        try {
-
-            const { db, appId, addDoc, collection } = window.vtt;
-
-            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'token-presets'), data);
-
-            closePresetModal();
-
-            showToast('📚 Ficha salva com sucesso!', 'success');
-
-        } catch (err) {
-
-            console.error('[VTT] Erro ao salvar preset:', err);
-
-            showToast('Erro ao salvar ficha', 'error');
-
-        }
-
-    };
-
-    /* ─ Renderizar Cards ─ */
-
-    function renderPresets(presets) {
-
-        const grid = _el('preset-grid');
-
-        if (!grid) return;
-
-        if (!presets.length) {
-
-            grid.innerHTML = '<p class="preset-empty-state">Nenhuma ficha salva ainda.</p>';
-
-            return;
-
-        }
-
-        grid.innerHTML = '';
-
-        presets.forEach(p => {
-
-            const card = document.createElement('div');
-
-            card.className = 'preset-card';
-
-            card.title = `Spawnar ${p.name} no mapa`;
-
-            /* Thumbnail */
-
-            const thumb = document.createElement('div');
-
-            thumb.className = 'preset-thumb';
-
-            thumb.style.borderColor = p.color || '#5C6BC0';
-
-            if (p.url) {
-
-                thumb.innerHTML = `<img src="${p.url}" alt="${p.name}">`;
-
-            } else {
-
-                thumb.textContent = p.type === 'NPC' ? '👹' : '🧙';
->>>>>>> 1e951c8 (Novo feito no VS)
 
             }
 
@@ -3784,73 +3519,9 @@ viewport.addEventListener('mousedown', (e) => {
 
         window.addEventListener('mousemove', onMove);
 
-<<<<<<< HEAD
         window.addEventListener('mouseup', onUp);
 
         return;
-=======
-            badge.className = `preset-type ${p.type === 'PC' ? 'pc' : 'npc'}`;
-
-            badge.textContent = p.type;
-
-            /* Nome */
-
-            const nameEl = document.createElement('span');
-
-            nameEl.className = 'preset-name';
-
-            nameEl.textContent = p.name;
-
-            /* Meta (HP / Tamanho) */
-
-            const metaEl = document.createElement('span');
-
-            metaEl.className = 'preset-meta';
-
-            const parts = [];
-
-            if (p.maxHp)   parts.push(`❤️ ${p.maxHp}`);
-
-            if (p.maxMana) parts.push(`💙 ${p.maxMana}`);
-
-            if (p.tokenSize > 1) parts.push(`${p.tokenSize}×${p.tokenSize}`);
-
-            metaEl.textContent = parts.join(' · ') || '—';
-
-            /* Botão deletar */
-
-            const delBtn = document.createElement('div');
-
-            delBtn.className = 'preset-del-btn';
-
-            delBtn.innerHTML = '✕';
-
-            delBtn.title = 'Remover ficha';
-
-            delBtn.onclick = (ev) => {
-
-                ev.stopPropagation();
-
-                deletePreset(p.id);
-
-            };
-
-            card.appendChild(thumb);
-
-            card.appendChild(badge);
-
-            card.appendChild(nameEl);
-
-            card.appendChild(metaEl);
-
-            card.appendChild(delBtn);
-
-            card.addEventListener('click', () => spawnPreset(p));
-
-            grid.appendChild(card);
-
-        });
->>>>>>> 1e951c8 (Novo feito no VS)
 
     }
 
