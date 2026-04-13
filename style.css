@@ -1322,6 +1322,112 @@ html, body {
 .token:hover { filter: brightness(1.15); }
 .token.selected { outline: 2px solid #6366f1; outline-offset: 2px; }
 
+/* ── Info container (nome + barras) abaixo do token ── */
+.token-info {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120%;
+    min-width: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding-top: 3px;
+    pointer-events: none;
+}
+
+.token-name {
+    font-size: 9px;
+    font-weight: 800;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1);
+    max-width: 150%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.token-bars-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.token-resource-bar {
+    position: relative;
+    width: 100%;
+    height: 5px;
+    background: rgba(15,23,42,0.85);
+    border-radius: 3px;
+    overflow: hidden;
+    display: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.token-resource-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.token-hp-fill {
+    background: linear-gradient(90deg, #15803d, #22c55e);
+}
+
+.token-mana-fill {
+    background: linear-gradient(90deg, #4338ca, #6366f1);
+}
+
+.token-bar-value {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 6px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+    white-space: nowrap;
+    line-height: 1;
+}
+
+/* Badge de controle do jogador */
+.token-player-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #22c55e;
+    border: 2px solid #020617;
+    display: none;
+    pointer-events: none;
+}
+.token-player-badge.visible { display: block; }
+
+/* Ícones de status ao redor do token */
+.token-status-ring {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2px;
+    pointer-events: none;
+    flex-wrap: nowrap;
+}
+
+.token-status-ring .status-icon {
+    font-size: 11px;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.9));
+}
+
 .token-img {
     width: 100%; height: 100%;
     border-radius: 50%;
