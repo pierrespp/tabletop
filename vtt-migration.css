@@ -14,8 +14,11 @@ body:not(.is-mestre) .jogador-only {
     display: block;
 }
 
-/* Keep existing display mode for GM-only inline controls in flex rows. */
-body.is-mestre .mestre-only.tools-fixed,
+/* Keep existing display mode only where flex is required. */
+body.is-mestre .mestre-only.tools-fixed {
+    display: block;
+}
+
 body.is-mestre .mestre-only.floating-init-actions {
     display: flex;
 }
