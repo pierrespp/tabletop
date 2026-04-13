@@ -2094,25 +2094,24 @@ html, body {
 /*
   Componentes renderizados em script.js seguem estes padrões.
   Mantém consistência visual, espaçamento e tipografia.
-  
+
   • renderPresence(): 
     - Classes: .presence-entry, .presence-dot, .presence-name, .presence-role
     - Espaçamento: gap 8px entre itens, padding 6px
     - Tipografia: 10px name, 7.5px role, 8px dot
-  
+
   • renderFloatingInitiative():
     - Classes: .init-entry, .init-entry-main, .init-roll-badge, .init-name
     - Espaçamento: gap 8px, padding 7px
     - Tipografia: 10px roll/name badges
-  
+
   • addInitSetupEntry():
     - Classes: .init-setup-row, .init-setup-input (name/bonus/type)
     - Espaçamento: gap 8px entre inputs, width 50%/20%/25%
     - Tipografia: 11px inputs, 9px labels
-  
+
   • renderPresets():
     - Classes: .preset-card, .preset-thumb, .preset-name, .preset-type, .preset-meta
     - Espaçamento: gap 5px, padding 10px, 42×42px thumb
     - Tipografia: 9px name, 7px type badge, 7.5px meta
 */
-
