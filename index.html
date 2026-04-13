@@ -272,17 +272,22 @@
     </div>
 
     <div id="floating-init-panel">
-    <div id="floating-init-header">
-        <span class="floating-init-title">⚡ Ordem de Turnos</span>
-        <button onclick="closeFloatingInit()" class="mestre-only floating-init-close">✕</button>
+        <div id="floating-init-header">
+            <span class="floating-init-title">⚡ Ordem de Turnos</span>
+            <button onclick="closeFloatingInit()" class="floating-init-close" title="Fechar">✕</button>
+        </div>
+        <div class="mestre-only floating-init-setup">
+            <button onclick="openInitSetupModal()" class="action-btn action-btn-primary action-btn-block action-btn-small">
+                📋 Preparar Iniciativa
+            </button>
+        </div>
+        <div id="floating-init-list"></div>
+        <div class="mestre-only floating-init-actions">
+            <button onclick="prevTurn()" class="action-btn action-btn-neutral action-btn-small action-btn-grow">◀ Voltar</button>
+            <button onclick="nextTurn()" class="action-btn action-btn-primary action-btn-small action-btn-grow">Avançar ▶</button>
+        </div>
+        <div id="floating-init-resizer"></div>
     </div>
-    <div id="floating-init-list"></div>
-    <div class="mestre-only floating-init-actions">
-        <button onclick="prevTurn()" class="action-btn action-btn-neutral action-btn-small action-btn-grow">◀ Voltar</button>
-        <button onclick="nextTurn()" class="action-btn action-btn-primary action-btn-small action-btn-grow">Avançar ▶</button>
-    </div>
-    <div id="floating-init-resizer"></div>
-</div>
 
 <div id="ctx-menu" role="menu" aria-label="Menu de contexto do token">
     <div class="ctx-item" id="ctx-rename">✏️ &nbsp;Renomear</div>
@@ -319,13 +324,9 @@
     <!-- ── Ferramentas fixas (só mestre) ── -->
     <div class="mestre-only tools-fixed tools-panel">
         <p class="panel-kicker">Ferramenta ativa</p>
-        <div class="tool-bar tool-bar-spaced">
-            <button class="tool-btn active" id="tool-move"      onclick="setMode('move')"      aria-label="Mover">🖐 Mover</button>
-            <button class="tool-btn"        id="tool-select"    onclick="setMode('select')"    aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
-        </div>
         <div class="tool-bar">
-            <button class="tool-btn"        id="tool-fog-paint" onclick="setMode('fog-paint')" title="Pintar 1x1">🌫️ Névoa</button>
-            <button class="tool-btn"        id="tool-fog-erase" onclick="setMode('fog-erase')" title="Revelar 1x1">👁️ Revelar</button>
+            <button class="tool-btn active" id="tool-move"          onclick="setMode('move')"          aria-label="Mover">🖐 Mover</button>
+            <button class="tool-btn"        id="tool-select"        onclick="setMode('select')"        aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
             <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Névoa em Área">⬛ Box Névoa</button>
             <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Revelar em Área">⬜ Box Rev.</button>
         </div>
@@ -515,23 +516,11 @@
         </div>
 
         <!-- ══ INICIATIVA ══ -->
-        <div class="acc-section">
-            <button class="acc-header" onclick="toggleAcc(this)" aria-expanded="false">
-                <span>⚡ Iniciativa</span>
-                <span class="acc-arrow">▶</span>
-            </button>
-            <div class="acc-body section-stack">
-                <button onclick="openInitSetupModal()"
-                    class="mestre-only action-btn action-btn-primary action-btn-block">
-                    📋 Preparar Iniciativa
-                </button>
-                <button onclick="toggleFloatingInit()" id="btn-toggle-init"
-                    class="action-btn action-btn-neutral action-btn-block"
-                    style="display:none;">
-                    👁️ Mostrar Painel de Turnos
-                </button>
-            </div>
-        </div>
+        <button onclick="toggleFloatingInit()"
+            id="btn-toggle-init"
+            class="action-btn action-btn-neutral action-btn-block" style="width:100%;margin-bottom:4px;">
+            ⚡ Iniciativa
+        </button>
 
         <!-- ══ DADOS ══ -->
         <div class="acc-section">
