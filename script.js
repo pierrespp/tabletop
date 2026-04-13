@@ -151,7 +151,9 @@ window.startVTT = async (role) => {
 
         _el('setup-modal').style.display = 'none';
 
-        _el('sync-dot').classList.replace('bg-red-500', 'bg-green-500');
+        _el('sync-dot').classList.remove('sync-dot-offline');
+
+        _el('sync-dot').classList.add('sync-dot-online');
 
         _el('sync-dot').title = 'Conectado';
 
@@ -2200,10 +2202,6 @@ window.rollAndStartInitiative = async () => {
 
         const roll = Math.floor(Math.random() * 20) + 1 + bonus; // 1d20 + bônus
 
-
-
-
-
         rolledInitiative.push({ id: Date.now() + Math.random(), name, bonus, type, roll });
 
     });
@@ -2232,133 +2230,225 @@ window.rollAndStartInitiative = async () => {
 
 };
 
-/* ─ Painel Flutuante ─ */
+window.closeInitSetupModal = () => _el('init-setup-modal').classList.remove('open');
 
-window.renderFloatingInitiative = () => {
+window.addInitSetupEntry = (name = '', bonus = 0, type = 'NPC') => {
 
-    const panel = _el('floating-init-panel');
+    const id = Date.now() + Math.random();
 
-    const list = _el('floating-init-list');
+    initSetupEntries.push({ id });
 
-    const btnToggle = _el('btn-toggle-init');
+    const div = document.createElement('div');
 
-    // Mostra o botão na sidebar apenas se o tracker existir e tiver itens
+    div.className = 'init-setup-row';
 
-    if(btnToggle) btnToggle.style.display = state.initiative.length > 0 ?
+    div.id = 'setup-row-' + id;
 
-        'block' : 'none';
+    div.innerHTML = `
 
-    if (!state.showTracker || state.initiative.length === 0) {
+        <input type="text" class="init-setup-input init-setup-name name-input" placeholder="Nome" value="${name}">
 
-        panel.style.display = 'none';
+        <input type="number" class="init-setup-input init-setup-bonus bonus-input" placeholder="Bônus" value="${bonus}">
 
-        return;
+        <select class="init-setup-input init-setup-type type-input">
 
-    }
+            <option value="PC" ${type==='PC'?'selected':''}>Jogador</option>
 
-    panel.style.display = 'flex';
+            <option value="NPC" ${type==='NPC'?'selected':''}>NPC</option>
 
-    list.innerHTML = '';
+        </select>
 
-    state.initiative.forEach((entry, idx) => {
+        <button onclick="removeInitSetupEntry(${id})" class="init-setup-remove-btn">✕</button>
 
-        const isCurrent = idx === state.initiativeTurn;
+    `;
 
-        const typeClass = entry.type === 'PC' ? 'pc' : 'npc';
-
-
-
-        const div = document.createElement('div');
-
-        div.className = `floating-init-entry ${isCurrent ? 'current' : ''}`;
-
-        div.innerHTML 
-
-            = `
-
-            <div class="flex items-center gap-2 overflow-hidden">
-
-                <span class="w-6 text-center text-slate-300 bg-black/30 rounded px-1">${entry.roll}</span>
-
-                <span class="${typeClass} truncate">${entry.name} ${isCurrent ? '◀' : ''}</span>
-
-            </div>
-
-
-
-        `;
-
-        list.appendChild(div);
-
-    });
+    _el('init-setup-list').appendChild(div);
 
 };
 
-window.toggleFloatingInit = async () => {
+window.removeInitSetupEntry = (id) => {
 
-    const panel = _el('floating-init-panel');
+    initSetupEntries = initSetupEntries.filter(e => e.id !== id);
 
-    const isNowVisible = panel.style.display === 'none';
+    _el('setup-row-' + id)?.remove();
 
-    panel.style.display = isNowVisible ? 'flex' : 'none';
+};
 
-    if (isNowVisible && window.vtt) {
+window.rollAndStartInitiative = async () => {
+
+    const rows = document.querySelectorAll('.init-setup-row');
+
+    const rolledInitiative = [];
+
+    rows.forEach(row => {
+
+        const name = row.querySelector('.name-input').value.trim() || 'Desconhecido';
+
+        const bonus = parseInt(row.querySelector('.bonus-input').value) || 0;
+
+        const type = row.querySelector('.type-input').value;
+
+        const roll = Math.floor(Math.random() * 20) + 1 + bonus; // 1d20 + bônus
+
+            
+
+        
+
+            rolledInitiative.push({ id: Date.now() + Math.random(), name, bonus, type, roll });
+
+        });
+
+        // Ordena do maior pro menor
+
+        rolledInitiative.sort((a, b) => b.roll - a.roll);
+
+        closeInitSetupModal();
 
         try {
 
             const { db, appId, doc, setDoc } = window.vtt;
 
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { showTracker: true }, { merge: true });
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
 
-        } catch (e) { console.error('[VTT] toggleFloatingInit:', e); }
+                initiative: rolledInitiative, 
 
-    }
+                initiativeTurn: 0,
 
-};
+                showTracker: true 
 
-window.closeFloatingInit = async () => {
+            }, { merge: true });
 
-    try {
+        } catch (e) { console.error('[VTT] Erro ao iniciar iniciativa:', e); }
 
-        const { db, appId, doc, setDoc } = window.vtt;
+    };
 
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { showTracker: false }, { merge: true });
+    /* ─ Painel Flutuante ─ */
 
-    } catch (e) { console.error('[VTT] Erro ao fechar iniciativa:', e); }
+    window.renderFloatingInitiative = () => {
 
-};
+        const panel = _el('floating-init-panel');
 
-window.nextTurn = async () => {
+        const list = _el('floating-init-list');
 
-    if (!state.initiative.length) return;
+        const btnToggle = _el('btn-toggle-init');
 
-    const next = (state.initiativeTurn + 1) % state.initiative.length;
+        // Mostra o botão na sidebar apenas se o tracker existir e tiver itens
 
-    try {
+        if(btnToggle) btnToggle.style.display = state.initiative.length > 0 ?
 
-        const { db, appId, doc, setDoc } = window.vtt;
+            'block' : 'none';
 
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: next }, { merge: true });
+        if (!state.showTracker || state.initiative.length === 0) {
 
-    } catch (e) { console.error('[VTT] nextTurn:', e); }
+            panel.style.display = 'none';
 
-};
+            return;
 
-window.prevTurn = async () => {
+        }
 
-    if (!state.initiative.length) return;
+        panel.style.display = 'flex';
 
-    const prev = (state.initiativeTurn - 1 + state.initiative.length) % state.initiative.length;
+        list.innerHTML = '';
 
-    try {
+        state.initiative.forEach((entry, idx) => {
 
-        const { db, appId, doc, setDoc } = window.vtt;
+            const isCurrent = idx === state.initiativeTurn;
 
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: prev }, { merge: true });
+            const typeClass = entry.type === 'PC' ? 'pc' : 'npc';
 
-    } catch (e) { console.error('[VTT] prevTurn:', e); }
+            
 
-};
+            const div = document.createElement('div');
+
+            div.className = `init-entry ${isCurrent ? `active-turn ${typeClass}` : ''}`;
+
+            div.innerHTML 
+
+                = `
+
+                <div class="init-entry-main">
+
+                    <span class="init-roll-badge">${entry.roll}</span>
+
+                    <span class="init-name ${typeClass}">${entry.name} ${isCurrent ? '◀' : ''}</span>
+
+                </div>
+
+          
+
+            `;
+
+            list.appendChild(div);
+
+        });
+
+    };
+
+    window.toggleFloatingInit = async () => {
+
+        const panel = _el('floating-init-panel');
+
+        const isNowVisible = panel.style.display === 'none';
+
+        panel.style.display = isNowVisible ? 'flex' : 'none';
+
+        if (isNowVisible && window.vtt) {
+
+            try {
+
+                const { db, appId, doc, setDoc } = window.vtt;
+
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { showTracker: true }, { merge: true });
+
+            } catch (e) { console.error('[VTT] toggleFloatingInit:', e); }
+
+        }
+
+    };
+
+    window.closeFloatingInit = async () => {
+
+        try {
+
+            const { db, appId, doc, setDoc } = window.vtt;
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { showTracker: false }, { merge: true });
+
+        } catch (e) { console.error('[VTT] Erro ao fechar iniciativa:', e); }
+
+    };
+
+    window.nextTurn = async () => {
+
+        if (!state.initiative.length) return;
+
+        const next = (state.initiativeTurn + 1) % state.initiative.length;
+
+        try {
+
+            const { db, appId, doc, setDoc } = window.vtt;
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: next }, { merge: true });
+
+        } catch (e) { console.error('[VTT] nextTurn:', e); }
+
+    };
+
+    window.prevTurn = async () => {
+
+        if (!state.initiative.length) return;
+
+        const prev = (state.initiativeTurn - 1 + state.initiative.length) % state.initiative.length;
+
+        try {
+
+            const { db, appId, doc, setDoc } = window.vtt;
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { initiativeTurn: prev }, { merge: true });
+
+        } catch (e) { console.error('[VTT] prevTurn:', e); }
+
+    };
 
 /* ─ Drag & Resize do Painel Flutuante ─ */
 
