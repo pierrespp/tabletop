@@ -1307,6 +1307,8 @@ html, body {
 
 .token {
     position: absolute;
+    top: 0;
+    left: 0;
     cursor: pointer;
     user-select: none;
     transition: filter 0.15s ease, transform 0.12s ease;
@@ -1326,9 +1328,8 @@ html, body {
 .token-info {
     position: absolute;
     top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 120%;
+    left: -10%;
+    right: -10%;
     min-width: 48px;
     display: flex;
     flex-direction: column;
