@@ -636,7 +636,9 @@
 <script>
     window.refreshAccordionHeights = function refreshAccordionHeights() {
         document.querySelectorAll('.acc-body.open').forEach((body) => {
-            body.style.maxHeight = body.scrollHeight + 'px';
+            if (body.style.maxHeight !== 'none') {
+                body.style.maxHeight = body.scrollHeight + 'px';
+            }
         });
     };
 
@@ -655,12 +657,21 @@
 
             requestAnimationFrame(() => {
                 body.style.maxHeight = body.scrollHeight + 'px';
+                body.addEventListener('transitionend', function onOpen(e) {
+                    if (e.propertyName === 'max-height' && body.classList.contains('open')) {
+                        body.style.maxHeight = 'none';
+                    }
+                    body.removeEventListener('transitionend', onOpen);
+                });
             });
 
             return;
         }
 
-        body.style.maxHeight = body.scrollHeight + 'px';
+        // Se max-height for 'none', precisamos definir um valor concreto antes de animar o fechamento
+        if (body.style.maxHeight === 'none') {
+            body.style.maxHeight = body.scrollHeight + 'px';
+        }
         btn.classList.remove('open');
         btn.setAttribute('aria-expanded', 'false');
 
@@ -671,7 +682,9 @@
     }
 
     requestAnimationFrame(() => {
-        window.refreshAccordionHeights();
+        document.querySelectorAll('.acc-body.open').forEach((body) => {
+            body.style.maxHeight = 'none';
+        });
     });
 </script>
 <script type="module" src="script.js"></script>
