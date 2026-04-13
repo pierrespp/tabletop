@@ -1255,6 +1255,10 @@ function updateTokenSizes() {
 
         el.style.width = el.style.height = px + 'px';
 
+        const wrapper = el.closest('.token-wrapper');
+
+        if (wrapper) wrapper.style.width = wrapper.style.height = px + 'px';
+
     });
 
 }
@@ -1401,7 +1405,17 @@ function updateTokenDOM(id, data) {
 
         conditions: data.conditions || [],
 
-        layer: layer
+        layer: layer,
+
+        name:    data.name    ?? null,
+
+        hp:      data.hp      ?? null,
+
+        maxHp:   data.maxHp   ?? null,
+
+        mana:    data.mana    ?? null,
+
+        maxMana: data.maxMana ?? null
 
     };
 
@@ -1420,6 +1434,8 @@ function updateTokenDOM(id, data) {
     const px = tokenPixelSize(tokenSize);
 
     el.style.width = el.style.height = px + 'px';
+
+    wrapper.style.width = wrapper.style.height = px + 'px';
 
     el.style.borderColor = data.color || '#ffffff';
 
@@ -1987,33 +2003,17 @@ function openHpModal(id) {
 
     hpTokenId = id;
 
-    /* Lê valores atuais do Firestore para pré-preencher */
+    /* Pré-preenche imediatamente com os valores do cache local */
 
-    const { db, appId, doc, getDoc } = window.vtt;
+    const cached = tokenDataMap[id] || {};
 
-    getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id)).then(snap => {
+    _el('hp-current-input').value   = cached.hp      ?? '';
 
-        const d = snap.exists() ? snap.data() : {};
+    _el('hp-max-input').value       = cached.maxHp   ?? '';
 
-        _el('hp-current-input').value   = d.hp     ?? '';
+    _el('mana-current-input').value = cached.mana    ?? '';
 
-        _el('hp-max-input').value       = d.maxHp  ?? '';
-
-        _el('mana-current-input').value = d.mana   ?? '';
-
-        _el('mana-max-input').value     = d.maxMana ?? '';
-
-    }).catch(() => {
-
-        _el('hp-current-input').value   = '';
-
-        _el('hp-max-input').value       = '';
-
-        _el('mana-current-input').value = '';
-
-        _el('mana-max-input').value     = '';
-
-    });
+    _el('mana-max-input').value     = cached.maxMana ?? '';
 
     _el('hp-modal').classList.add('open');
 
@@ -2325,9 +2325,9 @@ window.rollAndStartInitiative = async () => {
 
         const roll = Math.floor(Math.random() * 20) + 1 + bonus; // 1d20 + bônus
 
-            
 
-        
+
+
 
             rolledInitiative.push({ id: Date.now() + Math.random(), name, bonus, type, roll });
 
@@ -2391,7 +2391,7 @@ window.rollAndStartInitiative = async () => {
 
             const typeClass = entry.type === 'PC' ? 'pc' : 'npc';
 
-            
+
 
             const div = document.createElement('div');
 
@@ -2409,7 +2409,7 @@ window.rollAndStartInitiative = async () => {
 
                 </div>
 
-          
+
 
             `;
 
