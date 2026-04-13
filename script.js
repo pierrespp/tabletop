@@ -3560,17 +3560,9 @@ viewport.addEventListener('mousedown', (e) => {
 
     }
 
-    /* Verifica se o clique foi no fundo (não num token) */
+    /* Fora de token, o viewport inteiro deve aceitar pan e ferramentas de fundo. */
 
-    const bg = e.target === viewport || e.target === container ||
-
-               e.target === mapImg   || e.target === gridOverlay ||
-
-               e.target === hexCanvas ||
-
-               e.target === fogCanvas || e.target === rulerCanvas;
-
-    if (!bg) return;
+    if (e.target.closest('.token-wrapper, .token')) return;
 
     /* ── Modo Select: seleção retangular no fundo ── */
 
@@ -4222,7 +4214,9 @@ function renderPresets(presets) {
 
     if (!presets.length) {
 
-        grid.innerHTML = '<p class="col-span-2 text-[8.5px] text-slate-600 text-center py-2">Nenhuma ficha salva ainda.</p>';
+        grid.innerHTML = '<p class="preset-empty-state">Nenhuma ficha salva ainda.</p>';
+
+        window.refreshAccordionHeights?.();
 
         return;
 
@@ -4248,7 +4242,21 @@ function renderPresets(presets) {
 
         if (p.url) {
 
-            thumb.innerHTML = `<img src="${p.url}" alt="${p.name}">`;
+            const img = document.createElement('img');
+
+            img.src = p.url;
+
+            img.alt = p.name;
+
+            img.loading = 'lazy';
+
+            img.addEventListener('error', () => {
+
+                thumb.textContent = p.type === 'NPC' ? '👹' : '🧙';
+
+            }, { once: true });
+
+            thumb.appendChild(img);
 
         } else {
 
@@ -4260,7 +4268,7 @@ function renderPresets(presets) {
 
         const badge = document.createElement('span');
 
-        badge.className = `preset-type-badge ${p.type === 'PC' ? 'pc' : 'npc'}`;
+        badge.className = `preset-type ${p.type === 'PC' ? 'pc' : 'npc'}`;
 
         badge.textContent = p.type;
 
@@ -4292,7 +4300,7 @@ function renderPresets(presets) {
 
         const delBtn = document.createElement('div');
 
-        delBtn.className = 'preset-del';
+        delBtn.className = 'preset-del-btn';
 
         delBtn.innerHTML = '✕';
 
@@ -4321,6 +4329,8 @@ function renderPresets(presets) {
         grid.appendChild(card);
 
     });
+
+    window.refreshAccordionHeights?.();
 
 }
 
