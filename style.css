@@ -1301,6 +1301,10 @@ html, body {
    TOKENS
 ═══════════════════════════════════════════════════════════════ */
 
+.token-wrapper {
+    position: absolute;
+}
+
 .token {
     position: absolute;
     cursor: pointer;
