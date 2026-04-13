@@ -13,7 +13,7 @@ const state = {
 
     zoom: 1, pan: { x: 100, y: 100 },
 
-    gridSize: 60, opacity: 0.2,
+    gridSize: 60, opacity: 0.45,
 
     gridType: 'square',    
 
@@ -219,7 +219,7 @@ async function initSync() {
 
             await setDoc(worldRef, {
 
-                grid: 60, opacity: 0.2, gridType: 'square',
+                grid: 60, opacity: 0.45, gridType: 'square',
 
                 maps: { 0: null, 1: null, 2: null }, // Substituindo mapUrl antigo
 
@@ -245,7 +245,7 @@ async function initSync() {
 
         state.gridSize  = d.grid    ?? 60;
 
-        state.opacity   = d.opacity ?? 0.2;
+        state.opacity   = d.opacity ?? 0.45;
 
 
 
@@ -561,7 +561,7 @@ function drawHexGrid() {
 
     hexCtx.clearRect(0, 0, mapWidth, mapHeight);
 
-    hexCtx.strokeStyle = `rgba(0,0,0,${opacity * 2})`;
+    hexCtx.strokeStyle = `rgba(0,0,0,${Math.min(1, opacity * 2)})`;
 
     hexCtx.lineWidth = 1;
 
