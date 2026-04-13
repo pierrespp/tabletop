@@ -367,6 +367,10 @@ async function initSync() {
 
     initPresets();
 
+    /* Mapas salvos */
+
+    initMapPresets();
+
 }
 
 /* Aplica a imagem de mapa correta baseado na camada ativa (layer 0, 1, 2) */
@@ -2181,98 +2185,6 @@ window.addInitSetupEntry = (name = '', bonus = 0, type = 'NPC') => {
 
     initSetupEntries.push({ id });
 
-
-
-    const div = document.createElement('div');
-
-    div.className = 'init-setup-row';
-
-    div.id = 'setup-row-' + id;
-
-    div.innerHTML = `
-
-        <input type="text" class="init-setup-input w-1/2 name-input" placeholder="Nome" value="${name}">
-
-        <input type="number" class="init-setup-input w-1/5 text-center bonus-input" placeholder="Bônus" value="${bonus}">
-
-        <select class="init-setup-input w-1/4 type-input">
-
-            <option value="PC" ${type==='PC'?'selected':''}>Jogador</option>
-
-            <option value="NPC" ${type==='NPC'?'selected':''}>NPC</option>
-
-
-
-        </select>
-
-        <button onclick="removeInitSetupEntry(${id})" class="text-slate-500 hover:text-red-400 font-bold px-1">✕</button>
-
-    `;
-
-    _el('init-setup-list').appendChild(div);
-
-};
-
-window.removeInitSetupEntry = (id) => {
-
-    initSetupEntries = initSetupEntries.filter(e => e.id !== id);
-
-    _el('setup-row-' + id)?.remove();
-
-};
-
-window.rollAndStartInitiative = async () => {
-
-    const rows = document.querySelectorAll('.init-setup-row');
-
-    const rolledInitiative = [];
-
-    rows.forEach(row => {
-
-        const name = row.querySelector('.name-input').value.trim() || 'Desconhecido';
-
-        const bonus = parseInt(row.querySelector('.bonus-input').value) || 0;
-
-        const type = row.querySelector('.type-input').value;
-
-        const roll = Math.floor(Math.random() * 20) + 1 + bonus; // 1d20 + bônus
-
-        rolledInitiative.push({ id: Date.now() + Math.random(), name, bonus, type, roll });
-
-    });
-
-    // Ordena do maior pro menor
-
-    rolledInitiative.sort((a, b) => b.roll - a.roll);
-
-    closeInitSetupModal();
-
-    try {
-
-        const { db, appId, doc, setDoc } = window.vtt;
-
-        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { 
-
-            initiative: rolledInitiative, 
-
-            initiativeTurn: 0,
-
-            showTracker: true 
-
-        }, { merge: true });
-
-    } catch (e) { console.error('[VTT] Erro ao iniciar iniciativa:', e); }
-
-};
-
-window.closeInitSetupModal = () => _el('init-setup-modal').classList.remove('open');
-
-window.addInitSetupEntry = (name = '', bonus = 0, type = 'NPC') => {
-
-    const id = Date.now() + Math.random();
-
-    initSetupEntries.push({ id });
-
     const div = document.createElement('div');
 
     div.className = 'init-setup-row';
@@ -3931,7 +3843,7 @@ function renderPresence(users) {
 
     if (!list) return;
 
-    if (!users.length) { list.innerHTML = '<p class="text-[9px] text-slate-600 text-center py-1">Nenhum usuário.</p>'; return;
+    if (!users.length) { list.innerHTML = '<p class="presence-empty">Nenhum usuário.</p>'; return;
 
     }
 
@@ -3957,7 +3869,7 @@ function renderPresence(users) {
 
         div.innerHTML =
 
-            '<div class="presence-dot ' + (isMestre ? 'mestre' : 'jogador') + '"></div>' +
+            '<div class="presence-dot ' + (isMestre ? 'mestre' : 'online') + '"></div>' +
 
             '<span style="color:' + (isMestre ? '#fbbf24' : '#86efac') + ';font-weight:700">' +
 
@@ -4014,17 +3926,6 @@ _el('dice-notation-input').addEventListener('keydown', (e) => { if (e.key === 'E
         _el('map-preset-modal').style.display = 'none';
     };
 
-    _el('f-map-preset').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            mapPresetState.imageUrl = ev.target.result;
-            _el('map-preset-img-preview').innerHTML = `<img src="${ev.target.result}" alt="Preview">`;
-        };
-        reader.readAsDataURL(file);
-    };
-
 
 _el('f-map-preset').onchange = (e) => {
     const file = e.target.files[0];
@@ -4038,6 +3939,117 @@ _el('f-map-preset').onchange = (e) => {
 };
 
 /* ─ Abrir / Fechar Modal ─ */
+
+    window.saveMapPreset = async () => {
+        const name = (_el('map-preset-name-input').value || '').trim();
+        if (!name) { _el('map-preset-name-input').focus(); return; }
+        const data = {
+            name,
+            url:       mapPresetState.imageUrl || '',
+            gridSize:  state.gridSize,
+            gridType:  state.gridType,
+            opacity:   state.opacity,
+            mapWidth:  state.mapWidth,
+            mapHeight: state.mapHeight,
+            createdAt: Date.now()
+        };
+        try {
+            const { db, appId, addDoc, collection } = window.vtt;
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'map-presets'), data);
+            window.closeMapPresetModal();
+            showToast('🗺️ Mapa salvo com sucesso!', 'success');
+        } catch (err) {
+            console.error('[VTT] Erro ao salvar mapa preset:', err);
+            showToast('Erro ao salvar mapa', 'error');
+        }
+    };
+
+    function renderMapPresets(presets) {
+        const grid = _el('map-preset-grid');
+        if (!grid) return;
+        if (!presets.length) {
+            grid.innerHTML = '<p class="preset-empty-state">Nenhum mapa salvo ainda.</p>';
+            window.refreshAccordionHeights?.();
+            return;
+        }
+        grid.innerHTML = '';
+        presets.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'preset-card';
+            card.title = `Carregar mapa: ${p.name}`;
+            const thumb = document.createElement('div');
+            thumb.className = 'preset-thumb';
+            if (p.url) {
+                const img = document.createElement('img');
+                img.src = p.url; img.alt = p.name; img.loading = 'lazy';
+                img.addEventListener('error', () => { thumb.textContent = '🗺️'; }, { once: true });
+                thumb.appendChild(img);
+            } else { thumb.textContent = '🗺️'; }
+            const nameEl = document.createElement('span');
+            nameEl.className = 'preset-name';
+            nameEl.textContent = p.name;
+            const metaEl = document.createElement('span');
+            metaEl.className = 'preset-meta';
+            metaEl.textContent = `${p.gridType || 'square'} · ${p.gridSize || 60}px`;
+            const delBtn = document.createElement('div');
+            delBtn.className = 'preset-del-btn';
+            delBtn.innerHTML = '✕';
+            delBtn.title = 'Remover mapa salvo';
+            delBtn.onclick = (ev) => { ev.stopPropagation(); deleteMapPreset(p.id); };
+            card.appendChild(thumb);
+            card.appendChild(nameEl);
+            card.appendChild(metaEl);
+            card.appendChild(delBtn);
+            card.addEventListener('click', () => applyMapPreset(p));
+            grid.appendChild(card);
+        });
+        window.refreshAccordionHeights?.();
+    }
+
+    async function applyMapPreset(p) {
+        if (!window.vtt) return;
+        try {
+            const { db, appId, doc, setDoc } = window.vtt;
+            const newMaps = { ...state.maps };
+            newMaps[state.activeLayer] = { url: p.url || '', width: p.mapWidth || 1200, height: p.mapHeight || 800 };
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), {
+                maps: newMaps,
+                grid:     p.gridSize || state.gridSize,
+                opacity:  p.opacity  || state.opacity,
+                gridType: p.gridType || state.gridType
+            }, { merge: true });
+            showToast(`🗺️ Mapa "${p.name}" carregado`, 'success');
+        } catch (err) {
+            console.error('[VTT] Erro ao aplicar mapa preset:', err);
+            showToast('Erro ao carregar mapa', 'error');
+        }
+    }
+
+    async function deleteMapPreset(id) {
+        try {
+            const { db, appId, deleteDoc, doc } = window.vtt;
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'map-presets', id));
+            showToast('🗑️ Mapa removido', 'warn');
+        } catch (err) {
+            console.error('[VTT] Erro ao deletar mapa preset:', err);
+            showToast('Erro ao remover mapa', 'error');
+        }
+    }
+
+    function initMapPresets() {
+        const { db, appId, onSnapshot, collection, query, orderBy } = window.vtt;
+        onSnapshot(
+            query(collection(db, 'artifacts', appId, 'public', 'data', 'map-presets'), orderBy('createdAt', 'asc')),
+            (snap) => {
+                const presets = [];
+                snap.forEach(d => presets.push({ id: d.id, ...d.data() }));
+                renderMapPresets(presets);
+            },
+            (e) => console.error('[VTT] Sync map presets:', e)
+        );
+    }
+
+    /* ─ Abrir / Fechar Modal (fichas) ─ */
 
 window.openPresetModal = () => {
 
