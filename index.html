@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tabletop RPG Pro</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
@@ -43,24 +42,24 @@
 
 <body>
 
-<div id="setup-modal" class="fixed inset-0 bg-black/90 z-[600] flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 p-10 rounded-3xl max-w-sm w-full text-center shadow-2xl">
-        <h1 class="text-3xl font-black text-white mb-2 tracking-tight">Tabletop <span class="text-indigo-500">Pro</span></h1>
-        <p class="text-[10px] text-slate-500 uppercase tracking-widest mb-6">Mesa Virtual de RPG</p>
+<div id="setup-modal" class="setup-screen">
+    <div class="setup-card">
+        <h1 class="setup-brand">Tabletop <span class="setup-brand-accent">Pro</span></h1>
+        <p class="setup-kicker">Mesa Virtual de RPG</p>
         <div id="setup-step-name">
-            <p class="text-[11px] text-slate-400 mb-3">Como você quer ser chamado?</p>
+            <p class="setup-copy">Como você quer ser chamado?</p>
             <input id="setup-name-input" type="text" maxlength="24" placeholder="Seu nome..." autocomplete="off"
-                class="w-full bg-slate-800 border border-slate-700 text-white text-center text-base font-bold py-3 rounded-2xl outline-none focus:border-indigo-500 mb-4 placeholder-slate-600">
-            <button onclick="confirmName()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3.5 rounded-2xl font-bold transition-all active:scale-95">Continuar →</button>
+                class="setup-input">
+            <button onclick="confirmName()" class="setup-btn setup-btn-primary">Continuar →</button>
         </div>
         <div id="setup-step-role" style="display:none">
-            <p id="setup-name-greeting" class="text-[11px] text-slate-400 mb-4">Como deseja entrar?</p>
-            <div class="space-y-3">
-                <button onclick="startVTT('mestre')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-4 rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/20">⚔️ Entrar como Mestre</button>
-                <button onclick="startVTT('jogador')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-4 rounded-2xl font-bold transition-all active:scale-95">🎲 Entrar como Jogador</button>
+            <p id="setup-name-greeting" class="setup-copy setup-copy-spaced">Como deseja entrar?</p>
+            <div class="setup-actions">
+                <button onclick="startVTT('mestre')" class="setup-btn setup-btn-primary setup-btn-elevated">⚔️ Entrar como Mestre</button>
+                <button onclick="startVTT('jogador')" class="setup-btn setup-btn-secondary">🎲 Entrar como Jogador</button>
             </div>
         </div>
-        <p id="auth-log" class="mt-6 text-[10px] text-slate-500 uppercase font-bold tracking-widest">Aguardando Escolha...</p>
+        <p id="auth-log" class="setup-status">Aguardando Escolha...</p>
     </div>
 </div>
 
@@ -81,7 +80,7 @@
                 <span>3 × 3</span><small>Enorme</small>
             </div>
         </div>
-        <button class="btn-cancel w-full mt-4" onclick="closeTokenSizeModal()">Cancelar</button>
+        <button class="btn-cancel btn-block btn-top-space" onclick="closeTokenSizeModal()">Cancelar</button>
     </div>
 </div>
 
@@ -110,28 +109,28 @@
                 <span>½</span><small>Pequeno</small>
             </div>
         </div>
-        <button class="btn-cancel w-full mt-4" onclick="closeResizeTokenModal()">Cancelar</button>
+        <button class="btn-cancel btn-block btn-top-space" onclick="closeResizeTokenModal()">Cancelar</button>
     </div>
 </div>
 
 <div id="hp-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">❤️ Editar Atributos do Token</p>
-        <div class="space-y-3">
-            <div>
-                <label class="text-[9px] text-slate-500 block mb-1">HP Atual</label>
+        <div class="modal-stack">
+            <div class="modal-field">
+                <label class="modal-label">HP Atual</label>
                 <input type="number" id="hp-current-input" class="modal-input" placeholder="ex: 25">
             </div>
-            <div>
-                <label class="text-[9px] text-slate-500 block mb-1">HP Máximo</label>
+            <div class="modal-field">
+                <label class="modal-label">HP Máximo</label>
                 <input type="number" id="hp-max-input" class="modal-input" placeholder="ex: 40">
             </div>
-            <div>
-                <label class="text-[9px] text-slate-500 block mb-1">Mana / Energia Atual</label>
+            <div class="modal-field">
+                <label class="modal-label">Mana / Energia Atual</label>
                 <input type="number" id="mana-current-input" class="modal-input" placeholder="ex: 20">
             </div>
-            <div>
-                <label class="text-[9px] text-slate-500 block mb-1">Mana / Energia Máxima</label>
+            <div class="modal-field">
+                <label class="modal-label">Mana / Energia Máxima</label>
                 <input type="number" id="mana-max-input" class="modal-input" placeholder="ex: 30">
             </div>
         </div>
@@ -156,22 +155,22 @@
 <div id="status-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">🩹 Condições do Token</p>
-        <div id="status-grid" class="grid grid-cols-4 gap-2 mb-4"></div>
-        <button class="btn-cancel w-full" id="status-close">Fechar</button>
+        <div id="status-grid" class="status-grid-layout"></div>
+        <button class="btn-cancel btn-block" id="status-close">Fechar</button>
     </div>
 </div>
 
 <div id="init-setup-modal" class="modal-overlay">
-    <div class="modal-box" style="width: 480px; max-width: 95vw;">
+    <div class="modal-box modal-box-wide">
         <p class="modal-title">⚔️ Adicionar Personagens na Iniciativa</p>
-        <div class="flex justify-between mb-2 px-1">
-            <span class="text-[9px] text-slate-500 font-bold w-1/2">NOME</span>
-            <span class="text-[9px] text-slate-500 font-bold w-1/5 text-center">BÔNUS</span>
-            <span class="text-[9px] text-slate-500 font-bold w-1/4 text-center">TIPO</span>
-            <span class="w-6"></span>
+        <div class="init-setup-head">
+            <span class="init-setup-col init-setup-col-name">NOME</span>
+            <span class="init-setup-col init-setup-col-bonus">BÔNUS</span>
+            <span class="init-setup-col init-setup-col-type">TIPO</span>
+            <span class="init-setup-col init-setup-col-action"></span>
         </div>
-        <div id="init-setup-list" class="space-y-2 max-h-[40vh] overflow-y-auto mb-4 pr-1"></div>
-        <button onclick="addInitSetupEntry('', 0, 'NPC')" class="w-full bg-slate-800 border border-slate-700 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all mb-4">
+        <div id="init-setup-list" class="init-setup-list"></div>
+        <button onclick="addInitSetupEntry('', 0, 'NPC')" class="action-btn action-btn-neutral action-btn-block action-btn-add-row">
             ➕ Adicionar Personagem
         </button>
         <div class="modal-btns">
@@ -182,52 +181,52 @@
 </div>
 
 <div id="preset-modal" class="modal-overlay">
-    <div class="modal-box" style="width:360px;max-width:95vw;">
+    <div class="modal-box modal-box-narrow">
         <p class="modal-title">📚 Nova Ficha Salva</p>
 
-        <div class="flex gap-4 items-start mb-4">
+        <div class="media-picker-row">
             <div>
                 <div class="preset-modal-img-preview" id="preset-img-preview" onclick="document.getElementById('f-preset').click()" title="Clique para escolher imagem">
                     <span id="preset-img-placeholder">🧙</span>
                 </div>
-                <p class="text-[7.5px] text-slate-600 text-center mt-1">Clique na imagem</p>
+                <p class="media-picker-note media-picker-note-center">Clique na imagem</p>
             </div>
-            <div class="flex-1 space-y-2">
+            <div class="modal-form-fill modal-stack-sm">
                 <input type="text" id="preset-name-input" class="modal-input" placeholder="Nome do personagem / criatura" maxlength="32">
-                <div class="flex gap-2">
-                    <div class="flex-1">
-                        <p class="text-[7.5px] text-slate-500 mb-1">HP Máx</p>
+                <div class="modal-inline-fields">
+                    <div class="modal-form-fill">
+                        <p class="modal-micro-label">HP Máx</p>
                         <input type="number" id="preset-hp-input" class="modal-input" placeholder="ex: 40" min="0">
                     </div>
-                    <div class="flex-1">
-                        <p class="text-[7.5px] text-slate-500 mb-1">Mana Máx</p>
+                    <div class="modal-form-fill">
+                        <p class="modal-micro-label">Mana Máx</p>
                         <input type="number" id="preset-mana-input" class="modal-input" placeholder="ex: 20" min="0">
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="space-y-3">
-            <div>
-                <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5">Tamanho</p>
-                <div class="flex gap-1.5" id="preset-size-btns">
+        <div class="modal-stack">
+            <div class="modal-field">
+                <p class="modal-section-title">Tamanho</p>
+                <div class="preset-btn-row" id="preset-size-btns">
                     <button class="preset-size-btn active" data-size="1" onclick="selectPresetSize(1)">1×1 Padrão</button>
                     <button class="preset-size-btn" data-size="2" onclick="selectPresetSize(2)">2×2 Grande</button>
                     <button class="preset-size-btn" data-size="3" onclick="selectPresetSize(3)">3×3 Enorme</button>
                 </div>
             </div>
 
-            <div>
-                <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5">Tipo</p>
-                <div class="flex gap-2">
+            <div class="modal-field">
+                <p class="modal-section-title">Tipo</p>
+                <div class="modal-inline-fields">
                     <button class="preset-type-btn active-pc" id="preset-type-pc" onclick="selectPresetType('PC')">🟢 PC — Jogador</button>
                     <button class="preset-type-btn" id="preset-type-npc" onclick="selectPresetType('NPC')">🔴 NPC / Monstro</button>
                 </div>
             </div>
 
-            <div>
-                <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5">Cor da Borda</p>
-                <div class="flex gap-2 flex-wrap" id="preset-color-swatches">
+            <div class="modal-field">
+                <p class="modal-section-title">Cor da Borda</p>
+                <div class="swatch-row" id="preset-color-swatches">
                     <div class="color-swatch selected" data-color="#ffffff" style="background:#ffffff" onclick="selectPresetColor('#ffffff')" title="Branco"></div>
                     <div class="color-swatch" data-color="#ef4444" style="background:#ef4444" onclick="selectPresetColor('#ef4444')" title="Vermelho"></div>
                     <div class="color-swatch" data-color="#22c55e" style="background:#22c55e" onclick="selectPresetColor('#22c55e')" title="Verde"></div>
@@ -240,7 +239,7 @@
             </div>
         </div>
 
-        <div class="modal-btns mt-4">
+        <div class="modal-btns modal-btns-top-space">
             <button class="btn-cancel" onclick="closePresetModal()">Cancelar</button>
             <button class="btn-save" onclick="savePreset()">💾 Salvar Ficha</button>
         </div>
@@ -248,23 +247,23 @@
     </div>
 
     <div id="map-preset-modal" class="modal-overlay">
-        <div class="modal-box" style="width:360px;max-width:95vw;">
+        <div class="modal-box modal-box-narrow">
             <p class="modal-title">🗺️ Novo Mapa Salvo</p>
 
-            <div class="flex gap-4 items-start mb-4">
+            <div class="media-picker-row">
                 <div>
                     <div class="preset-modal-img-preview" id="map-preset-img-preview" onclick="document.getElementById('f-map-preset').click()" title="Clique para escolher imagem">
                         <span id="map-preset-img-placeholder">🗺️</span>
                     </div>
-                    <p class="text-[7.5px] text-slate-600 text-center mt-1">Clique na imagem</p>
+                    <p class="media-picker-note media-picker-note-center">Clique na imagem</p>
                 </div>
-                <div class="flex-1 space-y-2">
+                <div class="modal-form-fill modal-stack-sm">
                     <input type="text" id="map-preset-name-input" class="modal-input" placeholder="Nome do mapa..." maxlength="32">
-                    <p class="text-[7.5px] text-slate-500">As configurações de grade e tamanho atuais serão salvas.</p>
+                    <p class="modal-micro-copy">As configurações de grade e tamanho atuais serão salvas.</p>
                 </div>
             </div>
 
-            <div class="modal-btns mt-4">
+            <div class="modal-btns modal-btns-top-space">
                 <button class="btn-cancel" onclick="closeMapPresetModal()">Cancelar</button>
                 <button class="btn-save" onclick="saveMapPreset()">💾 Salvar Mapa</button>
             </div>
@@ -273,13 +272,13 @@
 
     <div id="floating-init-panel">
     <div id="floating-init-header">
-        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">⚡ Ordem de Turnos</span>
-        <button onclick="closeFloatingInit()" class="mestre-only text-slate-500 hover:text-red-400 text-sm font-bold">✕</button>
+        <span class="floating-init-title">⚡ Ordem de Turnos</span>
+        <button onclick="closeFloatingInit()" class="mestre-only floating-init-close">✕</button>
     </div>
     <div id="floating-init-list"></div>
-    <div class="mestre-only border-t border-slate-800 bg-slate-900 p-2 flex gap-2">
-        <button onclick="prevTurn()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold py-2 rounded-lg">◀ Voltar</button>
-        <button onclick="nextTurn()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold py-2 rounded-lg">Avançar ▶</button>
+    <div class="mestre-only floating-init-actions">
+        <button onclick="prevTurn()" class="action-btn action-btn-neutral action-btn-small action-btn-grow">◀ Voltar</button>
+        <button onclick="nextTurn()" class="action-btn action-btn-primary action-btn-small action-btn-grow">Avançar ▶</button>
     </div>
     <div id="floating-init-resizer"></div>
 </div>
@@ -308,42 +307,32 @@
 <div class="sidebar" id="sidebar">
 
     <!-- ── Cabeçalho ── -->
-    <div class="flex items-center justify-between mb-4">
-        <div>
-            <h2 class="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Tabletop Pro</h2>
-            <p id="role-label" class="text-[9px] text-slate-500 font-mono">Conectando...</p>
+    <div class="sidebar-header">
+        <div class="sidebar-brand-block">
+            <h2 class="sidebar-brand">Tabletop Pro</h2>
+            <p id="role-label" class="sidebar-role">Conectando...</p>
         </div>
-        <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" title="Status da conexão"></div>
+        <div id="sync-dot" class="sync-dot-offline" title="Status da conexão"></div>
     </div>
 
     <!-- ── Ferramentas fixas (só mestre) ── -->
-    <div class="mestre-only tools-fixed mb-3">
-        <p class="text-[8px] font-bold text-slate-600 uppercase tracking-widest mb-2">Ferramenta ativa</p>
-        <div class="tool-bar mb-1.5">
+    <div class="mestre-only tools-fixed tools-panel">
+        <p class="panel-kicker">Ferramenta ativa</p>
+        <div class="tool-bar tool-bar-spaced">
             <button class="tool-btn active" id="tool-move"      onclick="setMode('move')"      aria-label="Mover">🖐 Mover</button>
             <button class="tool-btn"        id="tool-select"    onclick="setMode('select')"    aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
         </div>
         <div class="tool-bar">
-            <button class="tool-btn"        id="tool-fog-paint" onclick="fillFog(); setMode('move')" title="Escurecer o mapa todo">🌫️ Névoa</button>
-            <button class="tool-btn"        id="tool-fog-erase" onclick="clearFog(); setMode('move')" title="Revelar o mapa todo">👁️ Revelar</button>
-            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Selecionar área para aplicar névoa">⬛ Selecionar Névoa</button>
-            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Selecionar área para revelar">⬜ Selecionar Rev.</button>
+            <button class="tool-btn"        id="tool-fog-paint" onclick="setMode('fog-paint')" title="Pintar 1x1">🌫️ Névoa</button>
+            <button class="tool-btn"        id="tool-fog-erase" onclick="setMode('fog-erase')" title="Revelar 1x1">👁️ Revelar</button>
+            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Névoa em Área">⬛ Box Névoa</button>
+            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Revelar em Área">⬜ Box Rev.</button>
         </div>
-        <p class="shortcut-hint mt-2">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua &nbsp;·&nbsp; Sel. = caixa de seleção</p>
-    </div>
-
-    <div class="jogador-only tools-fixed mb-3">
-        <p class="text-[8px] font-bold text-slate-600 uppercase tracking-widest mb-2">Ações do jogador</p>
-        <div class="tool-bar">
-            <button class="tool-btn active" id="tool-player-move" onclick="setMode('move')" aria-label="Mover tokens liberados">🖐 Mover</button>
-            <button class="tool-btn" onclick="openTokenSizeModal()" aria-label="Adicionar token">🧙 Novo Token</button>
-            <button class="tool-btn" id="tool-ping" onclick="setMode('ping')" aria-label="Pingar no mapa">📍 Ping</button>
-        </div>
-        <p class="shortcut-hint mt-2">Você pode mover tokens liberados e usar Ping para marcar um ponto no mapa.</p>
+        <p class="shortcut-hint shortcut-hint-spaced">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua &nbsp;·&nbsp; Sel. = caixa de seleção</p>
     </div>
 
     <!-- ── Conteúdo rolável ── -->
-    <div class="flex-1 overflow-y-auto space-y-2 pr-0.5">
+    <div class="sidebar-scroll">
 
         <!-- ══ CENA ══ -->
         <div class="acc-section mestre-only">
@@ -351,36 +340,36 @@
                 <span>🗺️ Cena</span>
                 <span class="acc-arrow">▶</span>
             </button>
-            <div class="acc-body open space-y-2">
+            <div class="acc-body open section-stack">
                 <button onclick="document.getElementById('f-map').click()"
-                    class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all"
+                    class="action-btn action-btn-primary action-btn-block"
                     aria-label="Alterar mapa">
                     🗺️ Alterar Mapa
                 </button>
-                <div class="flex gap-2">
+                <div class="split-actions">
                     <button onclick="openTokenSizeModal()"
-                        class="flex-1 bg-slate-800/60 border border-slate-700 py-2 rounded-xl text-[10px] font-bold text-slate-300 hover:bg-slate-700 transition-all"
+                        class="action-btn action-btn-neutral action-btn-grow action-btn-small"
                         aria-label="Adicionar token">
                         🧙 Novo Token
                     </button>
                     <button onclick="syncCamera()"
-                        class="flex-1 bg-emerald-600/10 border border-emerald-500/30 text-emerald-400 py-2 rounded-xl text-[10px] font-bold hover:bg-emerald-600 hover:text-white transition-all"
+                        class="action-btn action-btn-success action-btn-grow action-btn-small"
                         aria-label="Sincronizar câmera">
                         📡 Sync Câmera
                     </button>
                 </div>
 
                 <!-- Camadas -->
-                <div class="bg-black/20 rounded-xl p-2.5 border border-white/5">
-                    <div class="flex items-center justify-between mb-2">
-                        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">🏗️ Camada Ativa</p>
-                        <div class="flex gap-1">
-                            <button onclick="setLayer(0)" id="btn-layer-0" class="tool-btn active text-[9px] px-2.5 py-1" title="Térreo">0</button>
-                            <button onclick="setLayer(1)" id="btn-layer-1" class="tool-btn text-[9px] px-2.5 py-1" title="1º Andar">1</button>
-                            <button onclick="setLayer(2)" id="btn-layer-2" class="tool-btn text-[9px] px-2.5 py-1" title="2º Andar">2</button>
+                <div class="panel-card">
+                    <div class="panel-card-header">
+                        <p class="panel-card-title">🏗️ Camada Ativa</p>
+                        <div class="layer-switcher">
+                            <button onclick="setLayer(0)" id="btn-layer-0" class="tool-btn tool-btn-compact active" title="Térreo">0</button>
+                            <button onclick="setLayer(1)" id="btn-layer-1" class="tool-btn tool-btn-compact" title="1º Andar">1</button>
+                            <button onclick="setLayer(2)" id="btn-layer-2" class="tool-btn tool-btn-compact" title="2º Andar">2</button>
                         </div>
                     </div>
-                    <p class="text-[7.5px] text-slate-600">Tokens de outras camadas ficam ocultos para jogadores.</p>
+                    <p class="panel-note">Tokens de outras camadas ficam ocultos para jogadores.</p>
                 </div>
             </div>
         </div>
@@ -391,14 +380,14 @@
                 <span>📚 Fichas Salvas</span>
                 <span class="acc-arrow">▶</span>
             </button>
-            <div class="acc-body open space-y-2">
+            <div class="acc-body open section-stack">
                 <button onclick="openPresetModal()"
                     id="btn-open-preset-modal"
-                    class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2 rounded-xl text-[10px] font-bold hover:bg-indigo-600 hover:text-white transition-all">
+                    class="action-btn action-btn-primary action-btn-block action-btn-small">
                     ➕ Nova Ficha
                 </button>
                 <div id="preset-grid" class="preset-grid">
-                    <p class="col-span-2 text-[8.5px] text-slate-600 text-center py-2">Nenhuma ficha salva ainda.</p>
+                    <p class="preset-empty-state">Nenhuma ficha salva ainda.</p>
                 </div>
             </div>
         </div>
@@ -409,14 +398,14 @@
                         <span>🗺️ Mapas Salvos</span>
                         <span class="acc-arrow">▶</span>
                     </button>
-                    <div class="acc-body space-y-2">
+                    <div class="acc-body section-stack">
                         <button onclick="openMapPresetModal()"
                             id="btn-open-map-preset-modal"
-                            class="w-full bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 py-2 rounded-xl text-[10px] font-bold hover:bg-indigo-600 hover:text-white transition-all">
+                            class="action-btn action-btn-primary action-btn-block action-btn-small">
                             ➕ Salvar Mapa Atual
                         </button>
                         <div id="map-preset-grid" class="preset-grid">
-                            <p class="col-span-2 text-[8.5px] text-slate-600 text-center py-2">Nenhum mapa salvo ainda.</p>
+                            <p class="preset-empty-state">Nenhum mapa salvo ainda.</p>
                         </div>
                     </div>
                 </div>
@@ -427,18 +416,18 @@
                 <span>🌫️ Névoa de Guerra</span>
                 <span class="acc-arrow">▶</span>
             </button>
-            <div class="acc-body space-y-2">
-                <div class="flex gap-2">
+            <div class="acc-body section-stack">
+                <div class="split-actions">
                     <button onclick="clearFog()"
-                        class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-blue-900/40 hover:text-blue-300 hover:border-blue-700/40 transition-all">
-                        ☀️ Revelar Tudo
+                        class="action-btn action-btn-info action-btn-grow action-btn-small">
+                        👁️ Limpar Névoa
                     </button>
                     <button onclick="fillFog()"
-                        class="flex-1 text-[9px] font-bold py-2 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-400 hover:bg-slate-700 hover:text-white transition-all">
-                        🌑 Escurecer Tudo
+                        class="action-btn action-btn-neutral action-btn-grow action-btn-small">
+                        🌑 Cobrir Tudo
                     </button>
                 </div>
-                <p class="text-[7.5px] text-slate-600 text-center">Névoa / Revelar afetam o mapa inteiro. Use Selecionar Névoa / Selecionar Rev. para arrastar uma área.</p>
+                <p class="helper-copy helper-copy-center">Use as ferramentas Névoa / Revelar para pintar célula a célula.</p>
             </div>
         </div>
 
@@ -448,70 +437,73 @@
                 <span>⚙️ Grade & Mapa</span>
                 <span class="acc-arrow">▶</span>
             </button>
-            <div class="acc-body space-y-3">
+            <div class="acc-body section-stack section-stack-lg">
 
                 <!-- Tipo de grade -->
-                <div>
-                    <div class="flex justify-between text-[8px] font-bold text-slate-500 mb-1.5 uppercase">
-                        Tipo: <span id="grid-type-label" class="text-indigo-400">Quadrado</span>
+                <div class="control-group">
+                    <div class="control-head">
+                        <span class="control-label">Tipo</span>
+                        <span id="grid-type-label" class="control-value">Quadrado</span>
                     </div>
-                    <div class="flex gap-1.5">
-                        <button onclick="toggleGridType('square')" id="btn-grid-square" class="tool-btn active flex-1 text-[9px]">⬜ Quad.</button>
-                        <button onclick="toggleGridType('hex-v')"  id="btn-grid-hex-v"  class="tool-btn flex-1 text-[9px]">⬡ Hex V</button>
-                        <button onclick="toggleGridType('hex-h')"  id="btn-grid-hex-h"  class="tool-btn flex-1 text-[9px]">⬡ Hex H</button>
+                    <div class="segmented-row">
+                        <button onclick="toggleGridType('square')" id="btn-grid-square" class="tool-btn tool-btn-fill tool-btn-compact active">⬜ Quad.</button>
+                        <button onclick="toggleGridType('hex-v')"  id="btn-grid-hex-v"  class="tool-btn tool-btn-fill tool-btn-compact">⬡ Hex V</button>
+                        <button onclick="toggleGridType('hex-h')"  id="btn-grid-hex-h"  class="tool-btn tool-btn-fill tool-btn-compact">⬡ Hex H</button>
                     </div>
                 </div>
 
                 <!-- Tamanho da grade -->
-                <div>
-                    <div class="flex justify-between text-[8px] font-bold text-slate-500 mb-1 uppercase">
-                        Tamanho da Grade <span id="grid-txt" class="text-indigo-400">60px</span>
+                <div class="control-group">
+                    <div class="control-head">
+                        <span class="control-label">Tamanho da Grade</span>
+                        <span id="grid-txt" class="control-value">60px</span>
                     </div>
                     <input type="range" id="grid-range" min="30" max="150" value="60"
-                        class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                        class="range-input"
                         aria-label="Tamanho da grade">
                 </div>
 
                 <!-- Opacidade -->
-                <div>
-                    <div class="flex justify-between text-[8px] font-bold text-slate-500 mb-1 uppercase">
-                        Opacidade <span id="opacity-txt" class="text-indigo-400">20%</span>
+                <div class="control-group">
+                    <div class="control-head">
+                        <span class="control-label">Opacidade</span>
+                        <span id="opacity-txt" class="control-value">20%</span>
                     </div>
                     <input type="range" id="opacity-range" min="0" max="100" value="20"
-                        class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+                        class="range-input"
                         aria-label="Opacidade da grade">
                 </div>
 
                 <!-- Tamanho do mapa -->
-                <div>
-                    <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5">Dimensões do Mapa</p>
-                    <div class="space-y-1.5">
+                <div class="control-group">
+                    <p class="control-label">Dimensões do Mapa</p>
+                    <div class="control-stack-tight">
                         <div class="size-row" id="row-width">
-                            <span class="text-[9px] text-slate-500 w-10 uppercase flex-shrink-0">Larg.</span>
+                            <span class="dimension-label">Larg.</span>
                             <button class="map-size-btn" onclick="resizeMap('width',-100)" aria-label="Diminuir largura">−</button>
-                            <span id="map-w-txt" class="text-[9px] text-indigo-400 font-bold flex-1 text-center">1200px</span>
+                            <span id="map-w-txt" class="dimension-value">1200px</span>
                             <button class="map-size-btn" onclick="resizeMap('width',100)"  aria-label="Aumentar largura">+</button>
                         </div>
                         <div class="size-row" id="row-height">
-                            <span class="text-[9px] text-slate-500 w-10 uppercase flex-shrink-0">Alt.</span>
+                            <span class="dimension-label">Alt.</span>
                             <button class="map-size-btn" onclick="resizeMap('height',-100)" aria-label="Diminuir altura">−</button>
-                            <span id="map-h-txt" class="text-[9px] text-indigo-400 font-bold flex-1 text-center">800px</span>
+                            <span id="map-h-txt" class="dimension-value">800px</span>
                             <button class="map-size-btn" onclick="resizeMap('height',100)"  aria-label="Aumentar altura">+</button>
                         </div>
-                        <p class="text-[7.5px] text-slate-600 text-center">↕ Roda do mouse nas linhas acima</p>
+                        <p class="helper-copy helper-copy-center">↕ Roda do mouse nas linhas acima</p>
                     </div>
                 </div>
 
                 <!-- Área de risco -->
-                <div class="pt-2 border-t border-slate-800/60">
-                    <p class="text-[8px] font-bold text-red-500/80 uppercase tracking-widest mb-1.5">⚠️ Área de Risco</p>
-                    <div class="flex gap-2">
+                <div class="danger-zone">
+                    <p class="danger-zone-title">⚠️ Área de Risco</p>
+                    <div class="split-actions">
                         <button onclick="globalReset()"
-                            class="flex-1 bg-red-900/20 border border-red-700/30 text-red-400 py-1.5 rounded-xl text-[9px] font-bold hover:bg-red-700 hover:text-white transition-all">
+                            class="action-btn action-btn-danger action-btn-grow action-btn-small">
                             🗑️ Reset Geral
                         </button>
                         <button onclick="undoReset()" id="btn-undo-reset"
-                            class="flex-1 bg-slate-800 border border-slate-700 text-slate-400 py-1.5 rounded-xl text-[9px] font-bold hover:bg-slate-700 transition-all"
+                            class="action-btn action-btn-neutral action-btn-grow action-btn-small"
                             style="display:none;">
                             ↩️ Desfazer
                         </button>
@@ -527,13 +519,13 @@
                 <span>⚡ Iniciativa</span>
                 <span class="acc-arrow">▶</span>
             </button>
-            <div class="acc-body space-y-2">
+            <div class="acc-body section-stack">
                 <button onclick="openInitSetupModal()"
-                    class="mestre-only w-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all">
+                    class="mestre-only action-btn action-btn-primary action-btn-block">
                     📋 Preparar Iniciativa
                 </button>
                 <button onclick="toggleFloatingInit()" id="btn-toggle-init"
-                    class="w-full bg-slate-800/50 border border-slate-700 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all"
+                    class="action-btn action-btn-neutral action-btn-block"
                     style="display:none;">
                     👁️ Mostrar Painel de Turnos
                 </button>
@@ -546,73 +538,72 @@
                 <span>🎲 Rolagem de Dados</span>
                 <span class="acc-arrow">▶</span>
             </button>
-            <div class="acc-body open space-y-2">
+            <div class="acc-body open section-stack">
 
                 <!-- Notação avançada -->
-                <div class="bg-black/20 border border-white/5 rounded-xl p-2 space-y-1.5">
-                    <p class="text-[8px] font-bold text-slate-500 uppercase">Notação Avançada</p>
-                    <div class="flex gap-1.5">
+                <div class="panel-card panel-card-tight">
+                    <p class="panel-card-title">Notação Avançada</p>
+                    <div class="notation-row">
                         <input type="text" id="dice-notation-input"
                             placeholder="ex: 2d20kh1+5 / 4d6d1"
-                            class="flex-1 bg-slate-800/70 border border-slate-700 rounded-lg px-2 py-1.5 text-[10px] text-slate-300 outline-none focus:border-indigo-500 font-mono"
+                            class="notation-input"
                             aria-label="Notação de dados">
                         <button onclick="rollNotation()"
-                            class="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-[10px] font-bold hover:bg-indigo-600 hover:text-white transition-all"
+                            class="action-btn action-btn-primary action-btn-icon"
                             aria-label="Rolar notação">🎲</button>
                     </div>
-                    <p class="text-[7px] text-slate-600">kh = maior · kl = menor · d = descartar menor · dh = descartar maior</p>
+                    <p class="helper-copy">kh = maior · kl = menor · d = descartar menor · dh = descartar maior</p>
                 </div>
 
                 <!-- Tipos de dado -->
-                <div class="flex flex-wrap gap-1.5" id="dice-type-grid">
-                    <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d4</button>
-                    <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d6</button>
-                    <button onclick="setDiceType(8)"   id="dt-8"   class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d8</button>
-                    <button onclick="setDiceType(10)"  id="dt-10"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d10</button>
-                    <button onclick="setDiceType(12)"  id="dt-12"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d12</button>
-                    <button onclick="setDiceType(20)"  id="dt-20"  class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black active">d20</button>
-                    <button onclick="setDiceType(100)" id="dt-100" class="dice-btn py-2 px-3 rounded-xl text-[10px] font-black">d%</button>
+                <div class="dice-type-grid" id="dice-type-grid">
+                    <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn dice-type-btn">d4</button>
+                    <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn dice-type-btn">d6</button>
+                    <button onclick="setDiceType(8)"   id="dt-8"   class="dice-btn dice-type-btn">d8</button>
+                    <button onclick="setDiceType(10)"  id="dt-10"  class="dice-btn dice-type-btn">d10</button>
+                    <button onclick="setDiceType(12)"  id="dt-12"  class="dice-btn dice-type-btn">d12</button>
+                    <button onclick="setDiceType(20)"  id="dt-20"  class="dice-btn dice-type-btn active">d20</button>
+                    <button onclick="setDiceType(100)" id="dt-100" class="dice-btn dice-type-btn">d%</button>
                 </div>
 
                 <!-- Qtd e bônus -->
-                <div class="flex gap-2">
-                    <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
-                        <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Qtd.</p>
-                        <div class="flex items-center justify-between gap-1">
+                <div class="split-actions">
+                    <div class="counter-card">
+                        <p class="counter-title">Qtd.</p>
+                        <div class="counter-row">
                             <button onclick="changeDiceCount(-1)" class="map-size-btn">−</button>
-                            <span id="dice-count-txt" class="text-xs font-black text-indigo-400">1</span>
+                            <span id="dice-count-txt" class="counter-value counter-value-primary">1</span>
                             <button onclick="changeDiceCount(1)"  class="map-size-btn">+</button>
                         </div>
                     </div>
-                    <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-2">
-                        <p class="text-[8px] font-bold text-slate-500 uppercase mb-1.5 text-center">Bônus</p>
-                        <div class="flex items-center justify-between gap-1">
+                    <div class="counter-card">
+                        <p class="counter-title">Bônus</p>
+                        <div class="counter-row">
                             <button onclick="changeDiceBonus(-1)" class="map-size-btn">−</button>
-                            <span id="dice-bonus-txt" class="text-xs font-black text-emerald-400">+0</span>
+                            <span id="dice-bonus-txt" class="counter-value counter-value-success">+0</span>
                             <button onclick="changeDiceBonus(1)"  class="map-size-btn">+</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Botão rolar -->
-                <div class="text-center">
-                    <p id="dice-preview" class="text-[9px] text-slate-500 mb-1.5">1d20</p>
+                <div class="roll-panel">
+                    <p id="dice-preview" class="dice-preview">1d20</p>
                     <button onclick="roll()"
-                        class="w-full dice-btn py-2.5 rounded-xl text-[11px] font-black hover:bg-indigo-600 hover:text-white"
-                        style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#a5b4fc;"
+                        class="dice-btn dice-btn-cta"
                         aria-label="Rolar dados">🎲 ROLAR</button>
                 </div>
 
                 <!-- Histórico -->
-                <div class="flex items-center justify-between">
-                    <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest">Histórico</p>
+                <div class="panel-heading-row">
+                    <p class="panel-card-title">Histórico</p>
                     <button onclick="clearDiceHistory()"
-                        class="text-[8px] font-bold px-2 py-0.5 rounded-lg bg-slate-800/60 border border-slate-700 text-slate-500 hover:bg-red-900/40 hover:text-red-400 hover:border-red-700/40 transition-all">
+                        class="action-btn action-btn-neutral action-btn-tiny">
                         🗑 Limpar
                     </button>
                 </div>
                 <div id="dice-history"
-                    class="bg-black/20 rounded-2xl p-3 h-36 overflow-y-auto space-y-1.5 border border-white/5"
+                    class="history-panel"
                     role="log" aria-live="polite" aria-label="Histórico de rolagens"></div>
             </div>
         </div>
@@ -620,11 +611,11 @@
     </div>
 
     <!-- ── Presença Online (fixo no rodapé) ── -->
-    <div class="mt-3 pt-3 border-t border-slate-800/40">
-        <p class="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-2">🟢 Online Agora</p>
+    <div class="presence-shell">
+        <p class="panel-kicker">🟢 Online Agora</p>
         <div class="presence-panel">
             <div id="presence-list">
-                <p class="text-[9px] text-slate-600 text-center py-1">Nenhum usuário.</p>
+                <p class="presence-empty">Nenhum usuário.</p>
             </div>
         </div>
     </div>
