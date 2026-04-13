@@ -679,6 +679,10 @@ function renderMap() {
 
     /* Grade quadrada via CSS background-size */
 
+    gridOverlay.style.width  = state.mapWidth  + 'px';
+
+    gridOverlay.style.height = state.mapHeight + 'px';
+
     gridOverlay.style.backgroundSize = `${state.gridSize}px ${state.gridSize}px`;
 
     gridOverlay.style.opacity        = state.opacity;
