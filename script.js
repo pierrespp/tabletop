@@ -2277,25 +2277,27 @@ window.rollAndStartInitiative = async () => {
 
         const list = _el('floating-init-list');
 
-        const btnToggle = _el('btn-toggle-init');
+        /* Auto-abre apenas quando o GM ativou o tracker via Firebase */
+        if (state.showTracker && state.initiative.length > 0) {
 
-        // Mostra o botão na sidebar apenas se o tracker existir e tiver itens
+            panel.style.display = 'flex';
 
-        if(btnToggle) btnToggle.style.display = state.initiative.length > 0 ?
-
-            'block' : 'none';
-
-        if (!state.showTracker || state.initiative.length === 0) {
+        } else if (!panel.dataset.manualOpen && !state.showTracker) {
 
             panel.style.display = 'none';
+
+        }
+
+        /* Renderiza lista (ou estado vazio) */
+        list.innerHTML = '';
+
+        if (!state.initiative.length) {
+
+            list.innerHTML = '<p style="text-align:center;padding:16px 8px;font-size:9px;color:#334155;font-weight:700;text-transform:uppercase;letter-spacing:0.1em">Sem iniciativa ativa</p>';
 
             return;
 
         }
-
-        panel.style.display = 'flex';
-
-        list.innerHTML = '';
 
         state.initiative.forEach((entry, idx) => {
 
@@ -2303,26 +2305,15 @@ window.rollAndStartInitiative = async () => {
 
             const typeClass = entry.type === 'PC' ? 'pc' : 'npc';
 
-
-
             const div = document.createElement('div');
 
             div.className = `init-entry ${isCurrent ? `active-turn ${typeClass}` : ''}`;
 
-            div.innerHTML 
-
-                = `
-
+            div.innerHTML = `
                 <div class="init-entry-main">
-
                     <span class="init-roll-badge">${entry.roll}</span>
-
                     <span class="init-name ${typeClass}">${entry.name} ${isCurrent ? '◀' : ''}</span>
-
                 </div>
-
-
-
             `;
 
             list.appendChild(div);
@@ -2331,25 +2322,17 @@ window.rollAndStartInitiative = async () => {
 
     };
 
-    window.toggleFloatingInit = async () => {
+    window.toggleFloatingInit = () => {
 
         const panel = _el('floating-init-panel');
 
-        const isNowVisible = panel.style.display === 'none';
+        const isHidden = panel.style.display === 'none' || panel.style.display === '';
 
-        panel.style.display = isNowVisible ? 'flex' : 'none';
+        panel.style.display = isHidden ? 'flex' : 'none';
 
-        if (isNowVisible && window.vtt) {
+        panel.dataset.manualOpen = isHidden ? '1' : '';
 
-            try {
-
-                const { db, appId, doc, setDoc } = window.vtt;
-
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'world', 'current'), { showTracker: true }, { merge: true });
-
-            } catch (e) { console.error('[VTT] toggleFloatingInit:', e); }
-
-        }
+        if (isHidden) window.renderFloatingInitiative();
 
     };
 
