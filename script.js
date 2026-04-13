@@ -3543,11 +3543,29 @@ viewport.addEventListener('mousedown', (e) => {
 
     }
 
+    /* ── Ferramentas de névoa célula-a-célula ── */
+
+    if (state.mode === 'fog-paint' || state.mode === 'fog-erase') {
+
+        if (state.role !== 'mestre') return;
+
+        e.preventDefault();
+
+        state.isFogPainting = true;
+
+        applyFogAt(e.clientX, e.clientY);
+
+        return;
+
+    }
+
     if (state.mode === 'fog-box-paint' || state.mode === 'fog-box-erase') {
 
         if (state.role !== 'mestre') return;
 
         e.preventDefault();
+
+        const boxMode = state.mode;
 
         state.fogDragStart = { x: e.clientX, y: e.clientY };
 
@@ -3581,7 +3599,7 @@ viewport.addEventListener('mousedown', (e) => {
 
                 await saveFogNow();
 
-                showToast(`${count} célula${count > 1 ? 's' : ''} ${state.mode === 'fog-box-paint' ? 'escurecida' : 'revelada'}${count > 1 ? 's' : ''}`, 'info');
+                showToast(`${count} célula${count > 1 ? 's' : ''} ${boxMode === 'fog-box-paint' ? 'escurecida' : 'revelada'}${count > 1 ? 's' : ''}`, 'info');
 
             }
 
