@@ -18,7 +18,7 @@ html, body {
 
 /* ── Variáveis de tema (tipografia, cores, efeitos) ── */
 :root {
-    --sidebar-w: 280px;
+    --sidebar-w: 310px;
     --bg-deep: #0D1117;
     --bg-sidebar: rgba(13,17,23,0.97);
     --bg-panel: rgba(22,27,34,0.9);
@@ -345,13 +345,13 @@ html, body {
     background: rgba(22,27,34,0.85);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 10px;
+    padding: 10px 6px;
 }
 
 .tools-fixed .tool-bar {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    gap: 4px;
 }
 
 .tools-fixed .tool-btn {
