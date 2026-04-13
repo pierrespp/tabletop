@@ -334,15 +334,17 @@
 </nav>
 
 <div class="vtt-floating-tools mestre-only" aria-label="Ferramentas rápidas do mestre">
-    <button onclick="setMode('move')" title="Mover">➤</button>
-    <button onclick="setMode('select')" title="Selecionar tokens">▰</button>
-    <button class="active" onclick="toggleGridType('square')" title="Grade">▦</button>
-    <button onclick="openTokenSizeModal()" title="Novo token">✚</button>
+    <button id="tool-move"          onclick="setMode('move')"           title="Mover">➤</button>
+    <button id="tool-select"        onclick="setMode('select')"         title="Selecionar Tokens">▰</button>
+    <button id="tool-fog-box-paint" onclick="setMode('fog-box-paint')"  title="Selecionar Névoa">⬛</button>
+    <button id="tool-fog-box-erase" onclick="setMode('fog-box-erase')"  title="Selecionar Revelar">◒</button>
+    <button class="active"          onclick="toggleGridType('square')"  title="Alternar Grade">▦</button>
+    <button                         onclick="openTokenSizeModal()"      title="Novo Token">✚</button>
 </div>
 
 <div class="vtt-floating-tools jogador-only" aria-label="Ferramentas rápidas do jogador">
-    <button onclick="setMode('move')" title="Mover">➤</button>
-    <button class="active" onclick="setMode('ping')" title="Ping">⌁</button>
+    <button id="tool-player-move" onclick="setMode('move')" title="Mover">➤</button>
+    <button id="tool-ping" class="active" onclick="setMode('ping')" title="Ping">⌁</button>
     <button onclick="openTokenSizeModal()" title="Novo token">✚</button>
 </div>
 
@@ -369,31 +371,7 @@
         <div id="sync-dot" class="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]" title="Status da conexão"></div>
     </div>
 
-    <!-- ── Ferramentas fixas (só mestre) ── -->
-    <div class="mestre-only tools-fixed mb-3">
-        <p class="text-[8px] font-bold text-slate-600 uppercase tracking-widest mb-2">Ferramenta ativa</p>
-        <div class="tool-bar mb-1.5">
-            <button class="tool-btn active" id="tool-move"      onclick="setMode('move')"      aria-label="Mover">🖐 Mover</button>
-            <button class="tool-btn"        id="tool-select"    onclick="setMode('select')"    aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
-        </div>
-        <div class="tool-bar">
-            <button class="tool-btn"        id="tool-fog-paint" onclick="fillFog(); setMode('move')" title="Escurecer o mapa todo">🌫️ Névoa</button>
-            <button class="tool-btn"        id="tool-fog-erase" onclick="clearFog(); setMode('move')" title="Revelar o mapa todo">👁️ Revelar</button>
-            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Selecionar área para aplicar névoa">⬛ Selecionar Névoa</button>
-            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Selecionar área para revelar">⬜ Selecionar Rev.</button>
-        </div>
-        <p class="shortcut-hint mt-2">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua &nbsp;·&nbsp; Sel. = caixa de seleção</p>
-    </div>
 
-    <div class="jogador-only tools-fixed mb-3">
-        <p class="text-[8px] font-bold text-slate-600 uppercase tracking-widest mb-2">Ações do jogador</p>
-        <div class="tool-bar">
-            <button class="tool-btn active" id="tool-player-move" onclick="setMode('move')" aria-label="Mover tokens liberados">🖐 Mover</button>
-            <button class="tool-btn" onclick="openTokenSizeModal()" aria-label="Adicionar token">🧙 Novo Token</button>
-            <button class="tool-btn" id="tool-ping" onclick="setMode('ping')" aria-label="Pingar no mapa">📍 Ping</button>
-        </div>
-        <p class="shortcut-hint mt-2">Você pode mover tokens liberados e usar Ping para marcar um ponto no mapa.</p>
-    </div>
 
     <!-- ── Conteúdo rolável ── -->
     <div class="flex-1 overflow-y-auto space-y-2 pr-0.5">
