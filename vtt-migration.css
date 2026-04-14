@@ -121,3 +121,11 @@ body.is-mestre .mestre-only.floating-init-actions {
         opacity: 0;
     }
 }
+
+/* Icon bar — GM-only buttons use flex */
+body.is-mestre .ib-btn.mestre-only {
+    display: flex;
+}
+
+/* GM-only floating panels: override display when JS shows them */
+body.is-mestre .fp.mestre-only[style*="display: flex"] { display: flex !important; }
