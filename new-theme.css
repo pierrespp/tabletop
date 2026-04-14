@@ -168,8 +168,8 @@ html, body {
 
 #viewport {
     position: fixed;
-    top: 0; left: 0;
-    right: var(--sidebar-w);
+    top: 0; left: 56px;
+    right: 0;
     bottom: 0;
     overflow: hidden;
     cursor: grab;
@@ -2158,3 +2158,269 @@ html, body {
     - Espaçamento: gap 5px, padding 10px, 42×42px thumb
     - Tipografia: 9px name, 7px type badge, 7.5px meta
 */
+
+/* ═══════════════════════════════════════════════════════════════
+   ICON BAR (barra lateral de ícones)
+═══════════════════════════════════════════════════════════════ */
+
+.icon-bar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 56px;
+    z-index: 200;
+    background: rgba(10,14,20,0.98);
+    border-right: 1px solid rgba(255,255,255,0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0 10px;
+    gap: 4px;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+}
+
+.ib-logo {
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(92,107,192,0.3), rgba(63,81,181,0.15));
+    border: 1px solid rgba(92,107,192,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+
+.ib-logo-t { color: #fff; }
+.ib-logo-p { color: #7986CB; }
+
+.ib-sep {
+    width: 28px;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    flex-shrink: 0;
+    margin: 4px 0;
+}
+
+.ib-sep-grow {
+    flex: 1;
+    height: auto;
+    width: auto;
+    background: transparent;
+}
+
+.ib-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.16,1,0.3,1);
+    position: relative;
+    flex-shrink: 0;
+}
+
+.ib-btn:hover {
+    background: rgba(92,107,192,0.15);
+    border-color: rgba(92,107,192,0.25);
+}
+
+.ib-btn.active,
+.ib-btn.panel-open {
+    background: rgba(92,107,192,0.25);
+    border-color: rgba(92,107,192,0.5);
+    box-shadow: 0 0 14px rgba(92,107,192,0.2);
+}
+
+.ib-icon {
+    font-size: 17px;
+    line-height: 1;
+    pointer-events: none;
+    filter: grayscale(0.2);
+    transition: filter 0.15s ease;
+}
+
+.ib-btn:hover .ib-icon,
+.ib-btn.active .ib-icon { filter: grayscale(0); }
+
+/* Tooltip */
+.ib-btn[title]::after {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(10,14,20,0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #e2e8f0;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 9999;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+.ib-btn[title]:hover::after { opacity: 1; }
+
+.ib-footer {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    width: 44px;
+}
+
+.ib-role {
+    margin: 0;
+    font-size: 7px;
+    font-weight: 800;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    text-align: center;
+    line-height: 1.2;
+    max-width: 44px;
+    overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   FLOATING PANELS (.fp)
+═══════════════════════════════════════════════════════════════ */
+
+.fp {
+    position: fixed;
+    z-index: 300;
+    min-width: 240px;
+    max-width: 320px;
+    background: rgba(10,14,20,0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.04);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: fp-in 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
+    user-select: none;
+}
+
+@keyframes fp-in {
+    from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.fp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.025);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    cursor: grab;
+    flex-shrink: 0;
+}
+
+.fp-header:active { cursor: grabbing; }
+
+.fp-title {
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #7986CB;
+}
+
+.fp-close {
+    width: 22px; height: 22px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.fp-close:hover {
+    background: rgba(239,68,68,0.15);
+    color: #f87171;
+}
+
+.fp-body {
+    padding: 12px;
+    overflow-y: auto;
+    flex: 1;
+    max-height: calc(100vh - 120px);
+}
+
+/* scrollbar inside panels */
+.fp-body::-webkit-scrollbar { width: 3px; }
+.fp-body::-webkit-scrollbar-track { background: transparent; }
+.fp-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+/* Tool grid inside fp-tools */
+.fp-tool-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+
+.fp-tool-grid .tool-btn {
+    min-height: 34px;
+    white-space: normal;
+    line-height: 1.2;
+    font-size: 9px;
+}
+
+/* layer indicator update */
+#layer-indicator { left: 66px; }
+
+
+/* ── Resize handle for .fp panels ── */
+.fp-resizer {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 18px;
+    height: 18px;
+    cursor: se-resize;
+    background: transparent;
+    border-bottom: 3px solid rgba(255,255,255,0.12);
+    border-right:  3px solid rgba(255,255,255,0.12);
+    border-radius: 0 0 18px 0;
+    transition: border-color 0.15s ease;
+    z-index: 1;
+}
+.fp-resizer:hover {
+    border-bottom-color: rgba(92,107,192,0.5);
+    border-right-color:  rgba(92,107,192,0.5);
+}
+
+/* fp-body scrolls when panel is resized smaller than its content */
+.fp-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+}
