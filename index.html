@@ -120,6 +120,16 @@
     </div>
 </div>
 
+<!-- Control Permission Modal -->
+<div id="control-permission-modal" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-title">🎮 Permissão de Controle</p>
+        <p class="modal-subtitle" style="color:#94a3b8;font-size:12px;margin-bottom:12px;">Quem pode mover este token?</p>
+        <div id="ctrl-perm-options" class="ctrl-perm-list"></div>
+        <button class="btn-cancel btn-block btn-top-space" onclick="closeControlModal()">Cancelar</button>
+    </div>
+</div>
+
 <div id="hp-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">❤️ Editar Atributos do Token</p>
@@ -346,6 +356,9 @@
     <div class="ib-sep ib-sep-grow"></div>
 
     <!-- All players -->
+    <button class="ib-btn" title="Adicionar Token" onclick="openTokenSizeModal()">
+        <span class="ib-icon">🧑‍🎤</span>
+    </button>
     <button class="ib-btn" id="btn-toggle-init" data-target="floating-init-panel" title="Iniciativa" onclick="toggleFloatingInit()">
         <span class="ib-icon">⚡</span>
     </button>
