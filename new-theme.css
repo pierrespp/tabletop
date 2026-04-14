@@ -2424,3 +2424,50 @@ html, body {
     min-height: 0;
     max-height: none;
 }
+
+/* ── Control Permission Modal ── */
+.ctrl-perm-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.ctrl-perm-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: #e2e8f0;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ctrl-perm-btn:hover {
+    background: rgba(92,107,192,0.18);
+    border-color: rgba(92,107,192,0.5);
+}
+
+.ctrl-perm-btn.active {
+    background: rgba(92,107,192,0.25);
+    border-color: #5c6bc0;
+    box-shadow: 0 0 0 1px #5c6bc0;
+}
+
+.ctrl-perm-label {
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.ctrl-perm-desc {
+    font-size: 10px;
+    color: #64748b;
+    font-weight: 400;
+}
