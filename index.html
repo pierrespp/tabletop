@@ -43,6 +43,9 @@
 
 <body>
 
+<!-- ══════════════════════════════════════════════
+     SETUP SCREEN
+══════════════════════════════════════════════ -->
 <div id="setup-modal" class="setup-screen">
     <div class="setup-card">
         <h1 class="setup-brand">Tabletop <span class="setup-brand-accent">Pro</span></h1>
@@ -64,6 +67,9 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════
+     MODAIS (overlays — não mudam)
+══════════════════════════════════════════════ -->
 <div id="token-size-modal" class="modal-overlay">
     <div class="modal-box">
         <p class="modal-title">🧙 Tamanho do Token</p>
@@ -184,7 +190,6 @@
 <div id="preset-modal" class="modal-overlay">
     <div class="modal-box modal-box-narrow">
         <p class="modal-title">📚 Nova Ficha Salva</p>
-
         <div class="media-picker-row">
             <div>
                 <div class="preset-modal-img-preview" id="preset-img-preview" onclick="document.getElementById('f-preset').click()" title="Clique para escolher imagem">
@@ -206,7 +211,6 @@
                 </div>
             </div>
         </div>
-
         <div class="modal-stack">
             <div class="modal-field">
                 <p class="modal-section-title">Tamanho</p>
@@ -216,7 +220,6 @@
                     <button class="preset-size-btn" data-size="3" onclick="selectPresetSize(3)">3×3 Enorme</button>
                 </div>
             </div>
-
             <div class="modal-field">
                 <p class="modal-section-title">Tipo</p>
                 <div class="modal-inline-fields">
@@ -224,7 +227,6 @@
                     <button class="preset-type-btn" id="preset-type-npc" onclick="selectPresetType('NPC')">🔴 NPC / Monstro</button>
                 </div>
             </div>
-
             <div class="modal-field">
                 <p class="modal-section-title">Cor da Borda</p>
                 <div class="swatch-row" id="preset-color-swatches">
@@ -239,56 +241,59 @@
                 </div>
             </div>
         </div>
-
         <div class="modal-btns modal-btns-top-space">
             <button class="btn-cancel" onclick="closePresetModal()">Cancelar</button>
             <button class="btn-save" onclick="savePreset()">💾 Salvar Ficha</button>
         </div>
     </div>
-    </div>
+</div>
 
-    <div id="map-preset-modal" class="modal-overlay">
-        <div class="modal-box modal-box-narrow">
-            <p class="modal-title">🗺️ Novo Mapa Salvo</p>
-
-            <div class="media-picker-row">
-                <div>
-                    <div class="preset-modal-img-preview" id="map-preset-img-preview" onclick="document.getElementById('f-map-preset').click()" title="Clique para escolher imagem">
-                        <span id="map-preset-img-placeholder">🗺️</span>
-                    </div>
-                    <p class="media-picker-note media-picker-note-center">Clique na imagem</p>
+<div id="map-preset-modal" class="modal-overlay">
+    <div class="modal-box modal-box-narrow">
+        <p class="modal-title">🗺️ Novo Mapa Salvo</p>
+        <div class="media-picker-row">
+            <div>
+                <div class="preset-modal-img-preview" id="map-preset-img-preview" onclick="document.getElementById('f-map-preset').click()" title="Clique para escolher imagem">
+                    <span id="map-preset-img-placeholder">🗺️</span>
                 </div>
-                <div class="modal-form-fill modal-stack-sm">
-                    <input type="text" id="map-preset-name-input" class="modal-input" placeholder="Nome do mapa..." maxlength="32">
-                    <p class="modal-micro-copy">As configurações de grade e tamanho atuais serão salvas.</p>
-                </div>
+                <p class="media-picker-note media-picker-note-center">Clique na imagem</p>
             </div>
-
-            <div class="modal-btns modal-btns-top-space">
-                <button class="btn-cancel" onclick="closeMapPresetModal()">Cancelar</button>
-                <button class="btn-save" onclick="saveMapPreset()">💾 Salvar Mapa</button>
+            <div class="modal-form-fill modal-stack-sm">
+                <input type="text" id="map-preset-name-input" class="modal-input" placeholder="Nome do mapa..." maxlength="32">
+                <p class="modal-micro-copy">As configurações de grade e tamanho atuais serão salvas.</p>
             </div>
         </div>
+        <div class="modal-btns modal-btns-top-space">
+            <button class="btn-cancel" onclick="closeMapPresetModal()">Cancelar</button>
+            <button class="btn-save" onclick="saveMapPreset()">💾 Salvar Mapa</button>
+        </div>
     </div>
+</div>
 
-    <div id="floating-init-panel">
-        <div id="floating-init-header">
-            <span class="floating-init-title">⚡ Ordem de Turnos</span>
-            <button onclick="closeFloatingInit()" class="floating-init-close" title="Fechar">✕</button>
-        </div>
-        <div class="mestre-only floating-init-setup">
-            <button onclick="openInitSetupModal()" class="action-btn action-btn-primary action-btn-block action-btn-small">
-                📋 Preparar Iniciativa
-            </button>
-        </div>
-        <div id="floating-init-list"></div>
-        <div class="mestre-only floating-init-actions">
-            <button onclick="prevTurn()" class="action-btn action-btn-neutral action-btn-small action-btn-grow">◀ Voltar</button>
-            <button onclick="nextTurn()" class="action-btn action-btn-primary action-btn-small action-btn-grow">Avançar ▶</button>
-        </div>
-        <div id="floating-init-resizer"></div>
+<!-- ══════════════════════════════════════════════
+     PAINEL FLUTUANTE DE INICIATIVA (existente)
+══════════════════════════════════════════════ -->
+<div id="floating-init-panel">
+    <div id="floating-init-header">
+        <span class="floating-init-title">⚡ Ordem de Turnos</span>
+        <button onclick="closeInitLocal()" class="floating-init-close" title="Fechar">✕</button>
     </div>
+    <div class="mestre-only floating-init-setup">
+        <button onclick="openInitSetupModal()" class="action-btn action-btn-primary action-btn-block action-btn-small">
+            📋 Preparar Iniciativa
+        </button>
+    </div>
+    <div id="floating-init-list"></div>
+    <div class="mestre-only floating-init-actions">
+        <button onclick="prevTurn()" class="action-btn action-btn-neutral action-btn-small action-btn-grow">◀ Voltar</button>
+        <button onclick="nextTurn()" class="action-btn action-btn-primary action-btn-small action-btn-grow">Avançar ▶</button>
+    </div>
+    <div id="floating-init-resizer"></div>
+</div>
 
+<!-- ══════════════════════════════════════════════
+     CONTEXT MENU
+══════════════════════════════════════════════ -->
 <div id="ctx-menu" role="menu" aria-label="Menu de contexto do token">
     <div class="ctx-item" id="ctx-rename">✏️ &nbsp;Renomear</div>
     <div class="ctx-item" id="ctx-hp">❤️ &nbsp;Editar HP / Mana</div>
@@ -306,322 +311,357 @@
     <div class="ctx-item danger ctx-gm-only" id="ctx-delete">🗑️ &nbsp;Deletar Token</div>
 </div>
 
-<button id="mobile-menu-btn" aria-label="Abrir menu" onclick="toggleMobileMenu()">☰</button>
+<!-- ══════════════════════════════════════════════
+     ICON BAR (nova barra lateral esquerda)
+══════════════════════════════════════════════ -->
+<div class="icon-bar sidebar" id="sidebar">
 
-<div id="mobile-overlay" onclick="closeMobileMenu()"></div>
+    <!-- Logo / Brand -->
+    <div class="ib-logo" title="Tabletop Pro">
+        <span class="ib-logo-t">T</span><span class="ib-logo-p">P</span>
+    </div>
 
-<div class="sidebar" id="sidebar">
+    <div class="ib-sep"></div>
 
-    <!-- ── Cabeçalho ── -->
-    <div class="sidebar-header">
-        <div class="sidebar-brand-block">
-            <h2 class="sidebar-brand">Tabletop Pro</h2>
-            <p id="role-label" class="sidebar-role">Conectando...</p>
-        </div>
+    <!-- GM-only tools -->
+    <button class="ib-btn mestre-only" data-target="fp-tools" title="Ferramentas">
+        <span class="ib-icon">🖐</span>
+    </button>
+    <button class="ib-btn mestre-only" data-target="fp-cena" title="Cena / Mapa">
+        <span class="ib-icon">🗺️</span>
+    </button>
+    <button class="ib-btn mestre-only" data-target="fp-fichas" title="Fichas Salvas">
+        <span class="ib-icon">📚</span>
+    </button>
+    <button class="ib-btn mestre-only" data-target="fp-mapas" title="Mapas Salvos">
+        <span class="ib-icon">🗾</span>
+    </button>
+    <button class="ib-btn mestre-only" data-target="fp-nevoa" title="Névoa de Guerra">
+        <span class="ib-icon">🌫️</span>
+    </button>
+    <button class="ib-btn mestre-only" data-target="fp-grade" title="Grade & Mapa">
+        <span class="ib-icon">⚙️</span>
+    </button>
+
+    <div class="ib-sep ib-sep-grow"></div>
+
+    <!-- All players -->
+    <button class="ib-btn" id="btn-toggle-init" data-target="floating-init-panel" title="Iniciativa" onclick="toggleFloatingInit()">
+        <span class="ib-icon">⚡</span>
+    </button>
+    <button class="ib-btn" data-target="fp-dados" title="Rolagem de Dados">
+        <span class="ib-icon">🎲</span>
+    </button>
+    <button class="ib-btn" data-target="fp-presenca" title="Jogadores Online">
+        <span class="ib-icon">👥</span>
+    </button>
+
+    <!-- Footer: role + sync -->
+    <div class="ib-footer">
         <div id="sync-dot" class="sync-dot-offline" title="Status da conexão"></div>
+        <p id="role-label" class="ib-role">...</p>
     </div>
+</div>
 
-    <!-- ── Ferramentas fixas (só mestre) ── -->
-    <div class="mestre-only tools-fixed tools-panel">
+<!-- ══════════════════════════════════════════════
+     PAINÉIS FLUTUANTES
+══════════════════════════════════════════════ -->
+
+<!-- Ferramentas (GM only) -->
+<div class="fp mestre-only" id="fp-tools" style="top:80px;left:70px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">🖐 Ferramentas</span>
+        <button class="fp-close" onclick="closePanel('fp-tools')">✕</button>
+    </div>
+    <div class="fp-body">
         <p class="panel-kicker">Ferramenta ativa</p>
-        <div class="tool-bar">
-            <button class="tool-btn active" id="tool-move"          onclick="setMode('move')"          aria-label="Mover">🖐 Mover</button>
-            <button class="tool-btn"        id="tool-select"        onclick="setMode('select')"        aria-label="Selecionar tokens">⬛ Sel. Tokens</button>
-            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Névoa em Área">⬛ Box Névoa</button>
-            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Revelar em Área">⬜ Box Rev.</button>
+        <div class="fp-tool-grid">
+            <button class="tool-btn active" id="tool-move"          onclick="setMode('move')"          title="Mover">🖐 Mover</button>
+            <button class="tool-btn"        id="tool-select"        onclick="setMode('select')"        title="Selecionar tokens">⬛ Sel. Tokens</button>
+            <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Névoa em área">⬛ Box Névoa</button>
+            <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Revelar em área">⬜ Box Rev.</button>
         </div>
-        <p class="shortcut-hint shortcut-hint-spaced">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua &nbsp;·&nbsp; Sel. = caixa de seleção</p>
+        <p class="shortcut-hint shortcut-hint-spaced" style="color:#334155;">Ctrl+Clique = Ping &nbsp;·&nbsp; Shift+Arrastar = Régua</p>
     </div>
+    <div class="fp-resizer"></div>
+</div>
 
-    <!-- ── Conteúdo rolável ── -->
-    <div class="sidebar-scroll">
-
-        <!-- ══ CENA ══ -->
-        <div class="acc-section mestre-only">
-            <button class="acc-header open" onclick="toggleAcc(this)" aria-expanded="true">
-                <span>🗺️ Cena</span>
-                <span class="acc-arrow">▶</span>
-            </button>
-            <div class="acc-body open section-stack">
-                <button onclick="document.getElementById('f-map').click()"
-                    class="action-btn action-btn-primary action-btn-block"
-                    aria-label="Alterar mapa">
-                    🗺️ Alterar Mapa
-                </button>
-                <div class="split-actions">
-                    <button onclick="openTokenSizeModal()"
-                        class="action-btn action-btn-neutral action-btn-grow action-btn-small"
-                        aria-label="Adicionar token">
-                        🧙 Novo Token
-                    </button>
-                    <button onclick="syncCamera()"
-                        class="action-btn action-btn-success action-btn-grow action-btn-small"
-                        aria-label="Sincronizar câmera">
-                        📡 Sync Câmera
-                    </button>
-                </div>
-
-                <!-- Camadas -->
-                <div class="panel-card">
-                    <div class="panel-card-header">
-                        <p class="panel-card-title">🏗️ Camada Ativa</p>
-                        <div class="layer-switcher">
-                            <button onclick="setLayer(0)" id="btn-layer-0" class="tool-btn tool-btn-compact active" title="Térreo">0</button>
-                            <button onclick="setLayer(1)" id="btn-layer-1" class="tool-btn tool-btn-compact" title="1º Andar">1</button>
-                            <button onclick="setLayer(2)" id="btn-layer-2" class="tool-btn tool-btn-compact" title="2º Andar">2</button>
-                        </div>
-                    </div>
-                    <p class="panel-note">Tokens de outras camadas ficam ocultos para jogadores.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══ FICHAS SALVAS ══ -->
-        <div class="acc-section mestre-only">
-            <button class="acc-header open" onclick="toggleAcc(this)" aria-expanded="true">
-                <span>📚 Fichas Salvas</span>
-                <span class="acc-arrow">▶</span>
-            </button>
-            <div class="acc-body open section-stack">
-                <button onclick="openPresetModal()"
-                    id="btn-open-preset-modal"
-                    class="action-btn action-btn-primary action-btn-block action-btn-small">
-                    ➕ Nova Ficha
-                </button>
-                <div id="preset-grid" class="preset-grid">
-                    <p class="preset-empty-state">Nenhuma ficha salva ainda.</p>
-                </div>
-            </div>
-        </div>
-
-                <!-- ══ MAPAS SALVOS ══ -->
-                <div class="acc-section mestre-only">
-                    <button class="acc-header" onclick="toggleAcc(this)" aria-expanded="false">
-                        <span>🗺️ Mapas Salvos</span>
-                        <span class="acc-arrow">▶</span>
-                    </button>
-                    <div class="acc-body section-stack">
-                        <button onclick="openMapPresetModal()"
-                            id="btn-open-map-preset-modal"
-                            class="action-btn action-btn-primary action-btn-block action-btn-small">
-                            ➕ Salvar Mapa Atual
-                        </button>
-                        <div id="map-preset-grid" class="preset-grid">
-                            <p class="preset-empty-state">Nenhum mapa salvo ainda.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ══ NÉVOA DE GUERRA ══ -->
-        <div class="acc-section mestre-only">
-            <button class="acc-header" onclick="toggleAcc(this)" aria-expanded="false">
-                <span>🌫️ Névoa de Guerra</span>
-                <span class="acc-arrow">▶</span>
-            </button>
-            <div class="acc-body section-stack">
-                <div class="split-actions">
-                    <button onclick="clearFog()"
-                        class="action-btn action-btn-info action-btn-grow action-btn-small">
-                        👁️ Limpar Névoa
-                    </button>
-                    <button onclick="fillFog()"
-                        class="action-btn action-btn-neutral action-btn-grow action-btn-small">
-                        🌑 Cobrir Tudo
-                    </button>
-                </div>
-                <p class="helper-copy helper-copy-center">Use as ferramentas Névoa / Revelar para pintar célula a célula.</p>
-            </div>
-        </div>
-
-        <!-- ══ GRADE & MAPA ══ -->
-        <div class="acc-section mestre-only">
-            <button class="acc-header" onclick="toggleAcc(this)" aria-expanded="false">
-                <span>⚙️ Grade & Mapa</span>
-                <span class="acc-arrow">▶</span>
-            </button>
-            <div class="acc-body section-stack section-stack-lg">
-
-                <!-- Tipo de grade -->
-                <div class="control-group">
-                    <div class="control-head">
-                        <span class="control-label">Tipo</span>
-                        <span id="grid-type-label" class="control-value">Quadrado</span>
-                    </div>
-                    <div class="segmented-row">
-                        <button onclick="toggleGridType('square')" id="btn-grid-square" class="tool-btn tool-btn-fill tool-btn-compact active">⬜ Quad.</button>
-                        <button onclick="toggleGridType('hex-v')"  id="btn-grid-hex-v"  class="tool-btn tool-btn-fill tool-btn-compact">⬡ Hex V</button>
-                        <button onclick="toggleGridType('hex-h')"  id="btn-grid-hex-h"  class="tool-btn tool-btn-fill tool-btn-compact">⬡ Hex H</button>
-                    </div>
-                </div>
-
-                <!-- Tamanho da grade -->
-                <div class="control-group">
-                    <div class="control-head">
-                        <span class="control-label">Tamanho da Grade</span>
-                        <span id="grid-txt" class="control-value">60px</span>
-                    </div>
-                    <input type="range" id="grid-range" min="30" max="150" value="60"
-                        class="range-input"
-                        aria-label="Tamanho da grade">
-                </div>
-
-                <!-- Opacidade -->
-                <div class="control-group">
-                    <div class="control-head">
-                        <span class="control-label">Opacidade</span>
-                        <span id="opacity-txt" class="control-value">45%</span>
-                    </div>
-                    <input type="range" id="opacity-range" min="0" max="100" value="45"
-                        class="range-input"
-                        aria-label="Opacidade da grade">
-                </div>
-
-                <!-- Tamanho do mapa -->
-                <div class="control-group">
-                    <p class="control-label">Dimensões do Mapa</p>
-                    <div class="control-stack-tight">
-                        <div class="size-row" id="row-width">
-                            <span class="dimension-label">Larg.</span>
-                            <button class="map-size-btn" onclick="resizeMap('width',-100)" aria-label="Diminuir largura">−</button>
-                            <span id="map-w-txt" class="dimension-value">1200px</span>
-                            <button class="map-size-btn" onclick="resizeMap('width',100)"  aria-label="Aumentar largura">+</button>
-                        </div>
-                        <div class="size-row" id="row-height">
-                            <span class="dimension-label">Alt.</span>
-                            <button class="map-size-btn" onclick="resizeMap('height',-100)" aria-label="Diminuir altura">−</button>
-                            <span id="map-h-txt" class="dimension-value">800px</span>
-                            <button class="map-size-btn" onclick="resizeMap('height',100)"  aria-label="Aumentar altura">+</button>
-                        </div>
-                        <p class="helper-copy helper-copy-center">↕ Roda do mouse nas linhas acima</p>
-                    </div>
-                </div>
-
-                <!-- Área de risco -->
-                <div class="danger-zone">
-                    <p class="danger-zone-title">⚠️ Área de Risco</p>
-                    <div class="split-actions">
-                        <button onclick="globalReset()"
-                            class="action-btn action-btn-danger action-btn-grow action-btn-small">
-                            🗑️ Reset Geral
-                        </button>
-                        <button onclick="undoReset()" id="btn-undo-reset"
-                            class="action-btn action-btn-neutral action-btn-grow action-btn-small"
-                            style="display:none;">
-                            ↩️ Desfazer
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- ══ INICIATIVA ══ -->
-        <button onclick="toggleFloatingInit()"
-            id="btn-toggle-init"
-            class="action-btn action-btn-neutral action-btn-block" style="width:100%;margin-bottom:4px;">
-            ⚡ Iniciativa
+<!-- Cena (GM only) -->
+<div class="fp mestre-only" id="fp-cena" style="top:80px;left:70px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">🗺️ Cena</span>
+        <button class="fp-close" onclick="closePanel('fp-cena')">✕</button>
+    </div>
+    <div class="fp-body section-stack">
+        <button onclick="document.getElementById('f-map').click()"
+            class="action-btn action-btn-primary action-btn-block">
+            🗺️ Alterar Mapa
         </button>
-
-        <!-- ══ DADOS ══ -->
-        <div class="acc-section">
-            <button class="acc-header open" onclick="toggleAcc(this)" aria-expanded="true">
-                <span>🎲 Rolagem de Dados</span>
-                <span class="acc-arrow">▶</span>
+        <div class="split-actions">
+            <button onclick="openTokenSizeModal()"
+                class="action-btn action-btn-neutral action-btn-grow action-btn-small">
+                🧙 Novo Token
             </button>
-            <div class="acc-body open section-stack">
-
-                <!-- Notação avançada -->
-                <div class="panel-card panel-card-tight">
-                    <p class="panel-card-title">Notação Avançada</p>
-                    <div class="notation-row">
-                        <input type="text" id="dice-notation-input"
-                            placeholder="ex: 2d20kh1+5 / 4d6d1"
-                            class="notation-input"
-                            aria-label="Notação de dados">
-                        <button onclick="rollNotation()"
-                            class="action-btn action-btn-primary action-btn-icon"
-                            aria-label="Rolar notação">🎲</button>
-                    </div>
-                    <p class="helper-copy">kh = maior · kl = menor · d = descartar menor · dh = descartar maior</p>
+            <button onclick="syncCamera()"
+                class="action-btn action-btn-success action-btn-grow action-btn-small">
+                📡 Sync Câmera
+            </button>
+        </div>
+        <div class="panel-card">
+            <div class="panel-card-header">
+                <p class="panel-card-title">🏗️ Camada Ativa</p>
+                <div class="layer-switcher">
+                    <button onclick="setLayer(0)" id="btn-layer-0" class="tool-btn tool-btn-compact active" title="Térreo">0</button>
+                    <button onclick="setLayer(1)" id="btn-layer-1" class="tool-btn tool-btn-compact" title="1º Andar">1</button>
+                    <button onclick="setLayer(2)" id="btn-layer-2" class="tool-btn tool-btn-compact" title="2º Andar">2</button>
                 </div>
+            </div>
+            <p class="panel-note">Tokens de outras camadas ficam ocultos para jogadores.</p>
+        </div>
+    </div>
+    <div class="fp-resizer"></div>
+</div>
 
-                <!-- Tipos de dado -->
-                <div class="dice-type-grid" id="dice-type-grid">
-                    <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn dice-type-btn">d4</button>
-                    <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn dice-type-btn">d6</button>
-                    <button onclick="setDiceType(8)"   id="dt-8"   class="dice-btn dice-type-btn">d8</button>
-                    <button onclick="setDiceType(10)"  id="dt-10"  class="dice-btn dice-type-btn">d10</button>
-                    <button onclick="setDiceType(12)"  id="dt-12"  class="dice-btn dice-type-btn">d12</button>
-                    <button onclick="setDiceType(20)"  id="dt-20"  class="dice-btn dice-type-btn active">d20</button>
-                    <button onclick="setDiceType(100)" id="dt-100" class="dice-btn dice-type-btn">d%</button>
-                </div>
+<!-- Fichas Salvas (GM only) -->
+<div class="fp mestre-only" id="fp-fichas" style="top:140px;left:70px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">📚 Fichas Salvas</span>
+        <button class="fp-close" onclick="closePanel('fp-fichas')">✕</button>
+    </div>
+    <div class="fp-body section-stack">
+        <button onclick="openPresetModal()"
+            id="btn-open-preset-modal"
+            class="action-btn action-btn-primary action-btn-block action-btn-small">
+            ➕ Nova Ficha
+        </button>
+        <div id="preset-grid" class="preset-grid">
+            <p class="preset-empty-state">Nenhuma ficha salva ainda.</p>
+        </div>
+    </div>
+    <div class="fp-resizer"></div>
+</div>
 
-                <!-- Qtd e bônus -->
-                <div class="split-actions">
-                    <div class="counter-card">
-                        <p class="counter-title">Qtd.</p>
-                        <div class="counter-row">
-                            <button onclick="changeDiceCount(-1)" class="map-size-btn">−</button>
-                            <span id="dice-count-txt" class="counter-value counter-value-primary">1</span>
-                            <button onclick="changeDiceCount(1)"  class="map-size-btn">+</button>
-                        </div>
-                    </div>
-                    <div class="counter-card">
-                        <p class="counter-title">Bônus</p>
-                        <div class="counter-row">
-                            <button onclick="changeDiceBonus(-1)" class="map-size-btn">−</button>
-                            <span id="dice-bonus-txt" class="counter-value counter-value-success">+0</span>
-                            <button onclick="changeDiceBonus(1)"  class="map-size-btn">+</button>
-                        </div>
-                    </div>
-                </div>
+<!-- Mapas Salvos (GM only) -->
+<div class="fp mestre-only" id="fp-mapas" style="top:200px;left:70px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">🗾 Mapas Salvos</span>
+        <button class="fp-close" onclick="closePanel('fp-mapas')">✕</button>
+    </div>
+    <div class="fp-body section-stack">
+        <button onclick="openMapPresetModal()"
+            id="btn-open-map-preset-modal"
+            class="action-btn action-btn-primary action-btn-block action-btn-small">
+            ➕ Salvar Mapa Atual
+        </button>
+        <div id="map-preset-grid" class="preset-grid">
+            <p class="preset-empty-state">Nenhum mapa salvo ainda.</p>
+        </div>
+    </div>
+    <div class="fp-resizer"></div>
+</div>
 
-                <!-- Botão rolar -->
-                <div class="roll-panel">
-                    <p id="dice-preview" class="dice-preview">1d20</p>
-                    <button onclick="roll()"
-                        class="dice-btn dice-btn-cta"
-                        aria-label="Rolar dados">🎲 ROLAR</button>
-                </div>
+<!-- Névoa de Guerra (GM only) -->
+<div class="fp mestre-only" id="fp-nevoa" style="top:260px;left:70px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">🌫️ Névoa de Guerra</span>
+        <button class="fp-close" onclick="closePanel('fp-nevoa')">✕</button>
+    </div>
+    <div class="fp-body section-stack">
+        <div class="split-actions">
+            <button onclick="clearFog()"
+                class="action-btn action-btn-info action-btn-grow action-btn-small">
+                👁️ Limpar Névoa
+            </button>
+            <button onclick="fillFog()"
+                class="action-btn action-btn-neutral action-btn-grow action-btn-small">
+                🌑 Cobrir Tudo
+            </button>
+        </div>
+        <p class="helper-copy helper-copy-center">Use as ferramentas Névoa / Revelar para pintar célula a célula.</p>
+    </div>
+    <div class="fp-resizer"></div>
+</div>
 
-                <!-- Histórico -->
-                <div class="panel-heading-row">
-                    <p class="panel-card-title">Histórico</p>
-                    <button onclick="clearDiceHistory()"
-                        class="action-btn action-btn-neutral action-btn-tiny">
-                        🗑 Limpar
-                    </button>
+<!-- Grade & Mapa (GM only) -->
+<div class="fp mestre-only" id="fp-grade" style="top:80px;left:330px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">⚙️ Grade & Mapa</span>
+        <button class="fp-close" onclick="closePanel('fp-grade')">✕</button>
+    </div>
+    <div class="fp-body section-stack section-stack-lg">
+
+        <div class="control-group">
+            <div class="control-head">
+                <span class="control-label">Tipo</span>
+                <span id="grid-type-label" class="control-value">Quadrado</span>
+            </div>
+            <div class="segmented-row">
+                <button onclick="toggleGridType('square')" id="btn-grid-square" class="tool-btn tool-btn-fill tool-btn-compact active">⬜ Quad.</button>
+                <button onclick="toggleGridType('hex-v')"  id="btn-grid-hex-v"  class="tool-btn tool-btn-fill tool-btn-compact">⬡ Hex V</button>
+                <button onclick="toggleGridType('hex-h')"  id="btn-grid-hex-h"  class="tool-btn tool-btn-fill tool-btn-compact">⬡ Hex H</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="control-head">
+                <span class="control-label">Tamanho da Grade</span>
+                <span id="grid-txt" class="control-value">60px</span>
+            </div>
+            <input type="range" id="grid-range" min="30" max="150" value="60"
+                class="range-input" aria-label="Tamanho da grade">
+        </div>
+
+        <div class="control-group">
+            <div class="control-head">
+                <span class="control-label">Opacidade</span>
+                <span id="opacity-txt" class="control-value">45%</span>
+            </div>
+            <input type="range" id="opacity-range" min="0" max="100" value="45"
+                class="range-input" aria-label="Opacidade da grade">
+        </div>
+
+        <div class="control-group">
+            <p class="control-label">Dimensões do Mapa</p>
+            <div class="control-stack-tight">
+                <div class="size-row" id="row-width">
+                    <span class="dimension-label">Larg.</span>
+                    <button class="map-size-btn" onclick="resizeMap('width',-100)" aria-label="Diminuir largura">−</button>
+                    <span id="map-w-txt" class="dimension-value">1200px</span>
+                    <button class="map-size-btn" onclick="resizeMap('width',100)"  aria-label="Aumentar largura">+</button>
                 </div>
-                <div id="dice-history"
-                    class="history-panel"
-                    role="log" aria-live="polite" aria-label="Histórico de rolagens"></div>
+                <div class="size-row" id="row-height">
+                    <span class="dimension-label">Alt.</span>
+                    <button class="map-size-btn" onclick="resizeMap('height',-100)" aria-label="Diminuir altura">−</button>
+                    <span id="map-h-txt" class="dimension-value">800px</span>
+                    <button class="map-size-btn" onclick="resizeMap('height',100)"  aria-label="Aumentar altura">+</button>
+                </div>
+                <p class="helper-copy helper-copy-center">↕ Roda do mouse nas linhas acima</p>
+            </div>
+        </div>
+
+        <div class="danger-zone">
+            <p class="danger-zone-title">⚠️ Área de Risco</p>
+            <div class="split-actions">
+                <button onclick="globalReset()"
+                    class="action-btn action-btn-danger action-btn-grow action-btn-small">
+                    🗑️ Reset Geral
+                </button>
+                <button onclick="undoReset()" id="btn-undo-reset"
+                    class="action-btn action-btn-neutral action-btn-grow action-btn-small"
+                    style="display:none;">
+                    ↩️ Desfazer
+                </button>
             </div>
         </div>
 
     </div>
+    <div class="fp-resizer"></div>
+</div>
 
-    <!-- ── Presença Online (fixo no rodapé) ── -->
-    <div class="presence-shell">
-        <p class="panel-kicker">🟢 Online Agora</p>
+<!-- Dados (todos os jogadores) -->
+<div class="fp" id="fp-dados" style="top:80px;left:70px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">🎲 Rolagem de Dados</span>
+        <button class="fp-close" onclick="closePanel('fp-dados')">✕</button>
+    </div>
+    <div class="fp-body section-stack">
+
+        <div class="panel-card panel-card-tight">
+            <p class="panel-card-title">Notação Avançada</p>
+            <div class="notation-row">
+                <input type="text" id="dice-notation-input"
+                    placeholder="ex: 2d20kh1+5 / 4d6d1"
+                    class="notation-input"
+                    aria-label="Notação de dados">
+                <button onclick="rollNotation()"
+                    class="action-btn action-btn-primary action-btn-icon"
+                    aria-label="Rolar notação">🎲</button>
+            </div>
+            <p class="helper-copy">kh = maior · kl = menor · d = descartar menor · dh = descartar maior</p>
+        </div>
+
+        <div class="dice-type-grid" id="dice-type-grid">
+            <button onclick="setDiceType(4)"   id="dt-4"   class="dice-btn dice-type-btn">d4</button>
+            <button onclick="setDiceType(6)"   id="dt-6"   class="dice-btn dice-type-btn">d6</button>
+            <button onclick="setDiceType(8)"   id="dt-8"   class="dice-btn dice-type-btn">d8</button>
+            <button onclick="setDiceType(10)"  id="dt-10"  class="dice-btn dice-type-btn">d10</button>
+            <button onclick="setDiceType(12)"  id="dt-12"  class="dice-btn dice-type-btn">d12</button>
+            <button onclick="setDiceType(20)"  id="dt-20"  class="dice-btn dice-type-btn active">d20</button>
+            <button onclick="setDiceType(100)" id="dt-100" class="dice-btn dice-type-btn">d%</button>
+        </div>
+
+        <div class="split-actions">
+            <div class="counter-card">
+                <p class="counter-title">Qtd.</p>
+                <div class="counter-row">
+                    <button onclick="changeDiceCount(-1)" class="map-size-btn">−</button>
+                    <span id="dice-count-txt" class="counter-value counter-value-primary">1</span>
+                    <button onclick="changeDiceCount(1)"  class="map-size-btn">+</button>
+                </div>
+            </div>
+            <div class="counter-card">
+                <p class="counter-title">Bônus</p>
+                <div class="counter-row">
+                    <button onclick="changeDiceBonus(-1)" class="map-size-btn">−</button>
+                    <span id="dice-bonus-txt" class="counter-value counter-value-success">+0</span>
+                    <button onclick="changeDiceBonus(1)"  class="map-size-btn">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="roll-panel">
+            <p id="dice-preview" class="dice-preview">1d20</p>
+            <button onclick="roll()"
+                class="dice-btn dice-btn-cta"
+                aria-label="Rolar dados">🎲 ROLAR</button>
+        </div>
+
+        <div class="panel-heading-row">
+            <p class="panel-card-title">Histórico</p>
+            <button onclick="clearDiceHistory()"
+                class="action-btn action-btn-neutral action-btn-tiny">
+                🗑 Limpar
+            </button>
+        </div>
+        <div id="dice-history"
+            class="history-panel"
+            role="log" aria-live="polite" aria-label="Histórico de rolagens"></div>
+    </div>
+    <div class="fp-resizer"></div>
+</div>
+
+<!-- Presença Online (todos) -->
+<div class="fp" id="fp-presenca" style="top:80px;left:70px;display:none;">
+    <div class="fp-header" data-drag>
+        <span class="fp-title">👥 Online Agora</span>
+        <button class="fp-close" onclick="closePanel('fp-presenca')">✕</button>
+    </div>
+    <div class="fp-body">
         <div class="presence-panel">
             <div id="presence-list">
                 <p class="presence-empty">Nenhum usuário.</p>
             </div>
         </div>
     </div>
-
-    <input type="file" id="f-map"    class="hidden" accept="image/*,video/webm">
-    <input type="file" id="f-token"  class="hidden" accept="image/*">
-    <input type="file" id="f-preset" class="hidden" accept="image/*">
-    <input type="file" id="f-map-preset" class="hidden" accept="image/*">
+    <div class="fp-resizer"></div>
 </div>
 
+<!-- ══════════════════════════════════════════════
+     ELEMENTOS AUXILIARES
+══════════════════════════════════════════════ -->
 <div id="layer-indicator" aria-label="Camada ativa">Camada: <span id="layer-num">0</span></div>
-
 <div id="toast-container" aria-live="polite" aria-label="Notificações"></div>
-
 <div id="selection-box" aria-hidden="true"></div>
 
+<!-- Hidden file inputs -->
+<input type="file" id="f-map"        class="hidden" accept="image/*,video/webm">
+<input type="file" id="f-token"      class="hidden" accept="image/*">
+<input type="file" id="f-preset"     class="hidden" accept="image/*">
+<input type="file" id="f-map-preset" class="hidden" accept="image/*">
+
+<!-- ══════════════════════════════════════════════
+     VIEWPORT / MAPA
+══════════════════════════════════════════════ -->
 <div id="viewport">
     <div id="map-container">
         <img id="active-map" alt="Mapa da cena">
@@ -633,60 +673,166 @@
     </div>
 </div>
 
+<!-- ══════════════════════════════════════════════
+     PANEL SYSTEM JS
+══════════════════════════════════════════════ -->
 <script>
-    window.refreshAccordionHeights = function refreshAccordionHeights() {
-        document.querySelectorAll('.acc-body.open').forEach((body) => {
-            if (body.style.maxHeight !== 'none') {
-                body.style.maxHeight = body.scrollHeight + 'px';
-            }
-        });
-    };
+(function () {
+    var _fpZ = 300;
 
-    function toggleAcc(btn) {
-        const body = btn.nextElementSibling;
+    /* ── z-index management ── */
+    function bringToFront(panel) {
+        _fpZ++;
+        panel.style.zIndex = _fpZ;
+    }
 
-        if (!body) return;
-
-        const open = !body.classList.contains('open');
-
-        if (open) {
-            body.classList.add('open');
-            btn.classList.add('open');
-            btn.setAttribute('aria-expanded', 'true');
-            body.style.maxHeight = '0px';
-
-            requestAnimationFrame(() => {
-                body.style.maxHeight = body.scrollHeight + 'px';
-                body.addEventListener('transitionend', function onOpen(e) {
-                    if (e.propertyName === 'max-height' && body.classList.contains('open')) {
-                        body.style.maxHeight = 'none';
-                    }
-                    body.removeEventListener('transitionend', onOpen);
-                });
-            });
-
-            return;
-        }
-
-        // Se max-height for 'none', precisamos definir um valor concreto antes de animar o fechamento
-        if (body.style.maxHeight === 'none') {
-            body.style.maxHeight = body.scrollHeight + 'px';
-        }
-        btn.classList.remove('open');
-        btn.setAttribute('aria-expanded', 'false');
-
-        requestAnimationFrame(() => {
-            body.classList.remove('open');
-            body.style.maxHeight = '0px';
+    /* ── Sync icon-bar button state ── */
+    function setIbActive(id, active) {
+        document.querySelectorAll('.ib-btn[data-target="' + id + '"]').forEach(function (b) {
+            b.classList.toggle('active', active);
         });
     }
 
-    requestAnimationFrame(() => {
-        document.querySelectorAll('.acc-body.open').forEach((body) => {
-            body.style.maxHeight = 'none';
+    /* ── Open / Close / Toggle ── */
+    window.openPanel = function (id) {
+        var panel = document.getElementById(id);
+        if (!panel) return;
+        panel.style.display = 'flex';
+        bringToFront(panel);
+        setIbActive(id, true);
+    };
+
+    window.closePanel = function (id) {
+        var panel = document.getElementById(id);
+        if (!panel) return;
+        panel.style.display = 'none';
+        setIbActive(id, false);
+    };
+
+    window.togglePanel = function (id) {
+        var panel = document.getElementById(id);
+        if (!panel) return;
+        var visible = panel.style.display !== 'none' && panel.style.display !== '';
+        if (visible) { window.closePanel(id); } else { window.openPanel(id); }
+    };
+
+    /* ── Close the initiative panel locally (button in panel header) ── */
+    window.closeInitLocal = function () {
+        var panel = document.getElementById('floating-init-panel');
+        if (panel) {
+            panel.style.display = 'none';
+            panel.dataset.manualOpen = '';
+        }
+        setIbActive('floating-init-panel', false);
+        document.querySelectorAll('#btn-toggle-init').forEach(function (b) {
+            b.classList.remove('active', 'panel-open');
         });
+        /* Also sync Firebase state (non-blocking) */
+        if (typeof window.closeFloatingInit === 'function') {
+            try { window.closeFloatingInit(); } catch (e) {}
+        }
+    };
+
+    /* ── Drag & Resize for each .fp panel ── */
+    function initDragResize(panel) {
+        var header  = panel.querySelector('[data-drag]');
+        var resizer = panel.querySelector('.fp-resizer');
+
+        var state = { dragging: false, resizing: false, startX: 0, startY: 0, startL: 0, startT: 0, startW: 0, startH: 0 };
+
+        /* --- Drag via header --- */
+        if (header) {
+            header.addEventListener('mousedown', function (e) {
+                if (e.target.closest('.fp-close')) return;
+                var rect = panel.getBoundingClientRect();
+                state.dragging = true;
+                state.startX = e.clientX; state.startY = e.clientY;
+                state.startL = rect.left;  state.startT = rect.top;
+                panel.style.left   = rect.left + 'px';
+                panel.style.top    = rect.top  + 'px';
+                panel.style.right  = 'auto';
+                panel.style.bottom = 'auto';
+                bringToFront(panel);
+                e.preventDefault();
+            });
+        }
+
+        /* --- Resize via corner handle --- */
+        if (resizer) {
+            resizer.addEventListener('mousedown', function (e) {
+                state.resizing = true;
+                state.startX = e.clientX; state.startY = e.clientY;
+                state.startW = panel.offsetWidth;
+                state.startH = panel.offsetHeight;
+                bringToFront(panel);
+                e.stopPropagation();
+                e.preventDefault();
+            });
+        }
+
+        /* --- Shared mousemove/mouseup (per panel closure) --- */
+        document.addEventListener('mousemove', function (e) {
+            if (state.dragging) {
+                var nx = state.startL + (e.clientX - state.startX);
+                var ny = state.startT + (e.clientY - state.startY);
+                nx = Math.max(56, Math.min(nx, window.innerWidth  - panel.offsetWidth));
+                ny = Math.max(0,  Math.min(ny, window.innerHeight - 40));
+                panel.style.left = nx + 'px';
+                panel.style.top  = ny + 'px';
+            }
+            if (state.resizing) {
+                var nw = Math.max(220, state.startW + (e.clientX - state.startX));
+                var nh = Math.max(120, state.startH + (e.clientY - state.startY));
+                panel.style.width  = nw + 'px';
+                panel.style.height = nh + 'px';
+                panel.style.maxWidth  = 'none';
+                panel.style.maxHeight = 'none';
+            }
+        });
+
+        document.addEventListener('mouseup', function () {
+            state.dragging = false;
+            state.resizing = false;
+        });
+
+        panel.addEventListener('mousedown', function () { bringToFront(panel); });
+    }
+
+    /* ── Bootstrap on DOM ready ── */
+    document.addEventListener('DOMContentLoaded', function () {
+
+        /* Init drag+resize for all .fp panels */
+        document.querySelectorAll('.fp').forEach(initDragResize);
+
+        /* Wire icon-bar buttons (skip init button — handled by toggleFloatingInit) */
+        document.querySelectorAll('.ib-btn[data-target]').forEach(function (btn) {
+            if (btn.id === 'btn-toggle-init') return;
+            btn.addEventListener('click', function () {
+                window.togglePanel(btn.getAttribute('data-target'));
+            });
+        });
+
+        /* Patch toggleFloatingInit after module loads to sync button state */
+        setTimeout(function () {
+            var origToggle = window.toggleFloatingInit;
+            if (origToggle) {
+                window.toggleFloatingInit = function () {
+                    origToggle();
+                    var p = document.getElementById('floating-init-panel');
+                    var isOpen = p && p.style.display === 'flex';
+                    document.querySelectorAll('#btn-toggle-init').forEach(function (b) {
+                        b.classList.toggle('active', isOpen);
+                        b.classList.toggle('panel-open', isOpen);
+                    });
+                };
+            }
+        }, 400);
     });
+})();
+
+window.refreshAccordionHeights = function () {};
 </script>
+
 <script type="module" src="script.js"></script>
 
 </body>
