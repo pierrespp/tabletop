@@ -1447,11 +1447,31 @@ function updateTokenDOM(id, data) {
 
     const badge = _el('badge-' + id);
 
-    if (badge) badge.classList.toggle('visible', !!data.playerControlled);
+    const ctrl = data.controlledBy ?? (data.playerControlled ? 'all' : 'gm');
 
-    el.classList.toggle('player-can-move', !!data.playerControlled);
+    const playerCanMove = canControlToken(id);
 
-    el.classList.toggle('locked', !data.playerControlled && state.role === 'jogador');
+    if (badge) {
+
+        const isGmOnly = !ctrl || ctrl === 'gm';
+
+        badge.classList.toggle('visible', !isGmOnly);
+
+        if (ctrl === 'all') {
+
+            badge.textContent = '👥'; badge.title = 'Todos podem mover';
+
+        } else if (!isGmOnly) {
+
+            badge.textContent = '👤'; badge.title = 'Controle: ' + ctrl;
+
+        }
+
+    }
+
+    el.classList.toggle('player-can-move', playerCanMove && state.role !== 'mestre');
+
+    el.classList.toggle('locked', !playerCanMove && state.role !== 'mestre');
 
     /* ── Barras de HP ── */
 
@@ -1587,6 +1607,18 @@ function renderStatusIcons(id, conditions) {
 
 ═══════════════════════════════════════════════════════════════ */
 
+/* Returns true if the current user (player) can control this token */
+function canControlToken(id) {
+    if (state.role === 'mestre') return true;
+    const data = tokenDataMap[id];
+    if (!data) return false;
+    const ctrl = data.controlledBy;
+    if (ctrl === undefined) return !!data.playerControlled; /* backward compat */
+    if (!ctrl || ctrl === 'gm') return false;
+    if (ctrl === 'all') return true;
+    return ctrl === state.playerName;
+}
+
 function attachTokenEvents(el, id) {
 
     el.addEventListener('mousedown', (e) => {
@@ -1595,9 +1627,7 @@ function attachTokenEvents(el, id) {
 
         if (state.mode !== 'move' && state.mode !== 'select') return;
 
-        const isPC = tokenDataMap[id]?.playerControlled;
-
-        if (state.role !== 'mestre' && !isPC) return;
+        if (!canControlToken(id)) return;
 
         /* Bloqueia tokens de outras camadas para jogadores */
 
@@ -1805,9 +1835,7 @@ function attachTokenEvents(el, id) {
 
     el.addEventListener('contextmenu', (e) => {
 
-        const isPC = tokenDataMap[id]?.playerControlled;
-
-        if (state.role !== 'mestre' && !isPC) return;
+        if (!canControlToken(id)) return;
 
         e.preventDefault(); e.stopPropagation();
 
@@ -1819,11 +1847,12 @@ function attachTokenEvents(el, id) {
 
         if (isMestre) {
 
-            _el('ctx-player-ctrl').innerHTML = isPC
-
-                ? '🔒 &nbsp;Revogar Controle Jogadores'
-
-                : '🎮 &nbsp;Liberar para Jogadores';
+            const ctrl = tokenDataMap[id]?.controlledBy;
+            const oldPC = tokenDataMap[id]?.playerControlled;
+            let ctrlLabel = '🔒 Apenas Mestre';
+            if (ctrl === 'all' || (ctrl === undefined && oldPC)) ctrlLabel = '👥 Todos';
+            else if (ctrl && ctrl !== 'gm') ctrlLabel = '👤 ' + ctrl;
+            _el('ctx-player-ctrl').innerHTML = '🎮 &nbsp;Controle: ' + ctrlLabel;
 
         }
 
@@ -1933,23 +1962,95 @@ _el('ctx-delete').onclick = async () => {
 
 };
 
-_el('ctx-player-ctrl').onclick = async () => {
+_el('ctx-player-ctrl').onclick = () => {
 
     const id = ctxTokenId;
 
     if (!id) return;
 
-    const wasPC = tokenDataMap[id]?.playerControlled;
-
     closeCtxMenu();
+
+    openControlModal(id);
+
+};
+
+/* ── Control Permission Modal ── */
+
+let controlModalTokenId = null;
+
+window.openControlModal = function (id) {
+
+    controlModalTokenId = id;
+
+    const optionsEl = _el('ctrl-perm-options');
+
+    optionsEl.innerHTML = '';
+
+    const current = tokenDataMap[id]?.controlledBy
+        ?? (tokenDataMap[id]?.playerControlled ? 'all' : 'gm');
+
+    const addOption = (value, label, desc) => {
+
+        const btn = document.createElement('button');
+
+        btn.className = 'ctrl-perm-btn' + (current === value ? ' active' : '');
+
+        btn.innerHTML = '<span class="ctrl-perm-label">' + label + '</span>'
+            + (desc ? '<span class="ctrl-perm-desc">' + desc + '</span>' : '');
+
+        btn.onclick = () => applyControlPermission(id, value);
+
+        optionsEl.appendChild(btn);
+
+    };
+
+    addOption('gm',  '🔒 Apenas Mestre', 'Somente o Mestre pode mover');
+
+    addOption('all', '👥 Todos os Jogadores', 'Qualquer jogador pode mover');
+
+    /* Add one button per connected player */
+
+    const jogadores = presenceUsers.filter(u => u.role !== 'mestre');
+
+    jogadores.forEach(u => {
+
+        addOption(u.name, '👤 ' + u.name, 'Somente este jogador pode mover');
+
+    });
+
+    _el('control-permission-modal').classList.add('open');
+
+};
+
+window.closeControlModal = function () {
+
+    _el('control-permission-modal').classList.remove('open');
+
+    controlModalTokenId = null;
+
+};
+
+async function applyControlPermission(id, value) {
+
+    window.closeControlModal();
 
     try {
 
         const { db, appId, updateDoc, doc } = window.vtt;
 
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), { playerControlled: !wasPC });
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tokens', id), {
 
-    } catch (e) { console.error('[VTT] Erro ao alterar controle do jogador:', e); }
+            controlledBy: value,
+
+            playerControlled: value !== 'gm', /* keep old field in sync for compat */
+
+        });
+
+        const labels = { gm: 'Apenas Mestre', all: 'Todos os Jogadores' };
+
+        showToast('🎮 Controle: ' + (labels[value] || value), 'info');
+
+    } catch (e) { console.error('[VTT] Erro ao definir controle:', e); showToast('Erro ao salvar', 'error'); }
 
 };
 
@@ -2992,9 +3093,9 @@ _el('f-token').onchange = (e) => {
 
                     layer: state.activeLayer,
 
-                    playerControlled: state.role !== 'mestre',
+                    controlledBy: state.role === 'mestre' ? 'gm' : state.playerName,
 
-
+                    playerControlled: state.role !== 'mestre', /* legacy compat */
 
                     conditions: []
 
@@ -3768,6 +3869,8 @@ let presenceId = null;
 
 let presenceHeartbeat = null;
 
+let presenceUsers = [];
+
 async function initPresence() {
 
     const { db, appId, doc, setDoc, deleteDoc, onSnapshot, collection } = window.vtt;
@@ -3821,6 +3924,8 @@ async function initPresence() {
 }
 
 function renderPresence(users) {
+
+    presenceUsers = users;
 
     const list = _el('presence-list');
 
