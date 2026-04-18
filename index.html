@@ -10,6 +10,16 @@
     <link rel="stylesheet" href="new-theme.css">
     <link rel="stylesheet" href="vtt-migration.css">
 
+    <!-- SVG Icons Sprite -->
+    <script>
+        fetch('icons.svg').then(r => r.text()).then(svg => {
+            const div = document.createElement('div');
+            div.innerHTML = svg;
+            div.style.display = 'none';
+            document.body.insertBefore(div, document.body.firstChild);
+        });
+    </script>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -117,16 +127,6 @@
             </div>
         </div>
         <button class="btn-cancel btn-block btn-top-space" onclick="closeResizeTokenModal()">Cancelar</button>
-    </div>
-</div>
-
-<!-- Control Permission Modal -->
-<div id="control-permission-modal" class="modal-overlay">
-    <div class="modal-box">
-        <p class="modal-title">🎮 Permissão de Controle</p>
-        <p class="modal-subtitle" style="color:#94a3b8;font-size:12px;margin-bottom:12px;">Quem pode mover este token?</p>
-        <div id="ctrl-perm-options" class="ctrl-perm-list"></div>
-        <button class="btn-cancel btn-block btn-top-space" onclick="closeControlModal()">Cancelar</button>
     </div>
 </div>
 
@@ -335,38 +335,35 @@
 
     <!-- GM-only tools -->
     <button class="ib-btn mestre-only" data-target="fp-tools" title="Ferramentas">
-        <span class="ib-icon">🖐</span>
+        <svg class="ib-icon icon-md"><use href="#icon-hand"/></svg>
     </button>
     <button class="ib-btn mestre-only" data-target="fp-cena" title="Cena / Mapa">
-        <span class="ib-icon">🗺️</span>
+        <svg class="ib-icon icon-md"><use href="#icon-map"/></svg>
     </button>
     <button class="ib-btn mestre-only" data-target="fp-fichas" title="Fichas Salvas">
-        <span class="ib-icon">📚</span>
+        <svg class="ib-icon icon-md"><use href="#icon-book"/></svg>
     </button>
     <button class="ib-btn mestre-only" data-target="fp-mapas" title="Mapas Salvos">
-        <span class="ib-icon">🗾</span>
+        <svg class="ib-icon icon-md"><use href="#icon-layers"/></svg>
     </button>
     <button class="ib-btn mestre-only" data-target="fp-nevoa" title="Névoa de Guerra">
-        <span class="ib-icon">🌫️</span>
+        <svg class="ib-icon icon-md"><use href="#icon-cloud"/></svg>
     </button>
     <button class="ib-btn mestre-only" data-target="fp-grade" title="Grade & Mapa">
-        <span class="ib-icon">⚙️</span>
+        <svg class="ib-icon icon-md"><use href="#icon-settings"/></svg>
     </button>
 
     <div class="ib-sep ib-sep-grow"></div>
 
     <!-- All players -->
-    <button class="ib-btn" title="Adicionar Token" onclick="openTokenSizeModal()">
-        <span class="ib-icon">🧑‍🎤</span>
-    </button>
     <button class="ib-btn" id="btn-toggle-init" data-target="floating-init-panel" title="Iniciativa" onclick="toggleFloatingInit()">
-        <span class="ib-icon">⚡</span>
+        <svg class="ib-icon icon-md"><use href="#icon-zap"/></svg>
     </button>
     <button class="ib-btn" data-target="fp-dados" title="Rolagem de Dados">
-        <span class="ib-icon">🎲</span>
+        <svg class="ib-icon icon-md"><use href="#icon-dice"/></svg>
     </button>
     <button class="ib-btn" data-target="fp-presenca" title="Jogadores Online">
-        <span class="ib-icon">👥</span>
+        <svg class="ib-icon icon-md"><use href="#icon-users"/></svg>
     </button>
 
     <!-- Footer: role + sync -->
@@ -383,13 +380,13 @@
 <!-- Ferramentas (GM only) -->
 <div class="fp mestre-only" id="fp-tools" style="top:80px;left:70px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">🖐 Ferramentas</span>
-        <button class="fp-close" onclick="closePanel('fp-tools')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-hand"/></svg> Ferramentas</span>
+        <button class="fp-close" onclick="closePanel('fp-tools')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body">
         <p class="panel-kicker">Ferramenta ativa</p>
         <div class="fp-tool-grid">
-            <button class="tool-btn active" id="tool-move"          onclick="setMode('move')"          title="Mover">🖐 Mover</button>
+            <button class="tool-btn active" id="tool-move"          onclick="setMode('move')"          title="Mover"><svg class="icon icon-sm"><use href="#icon-hand"/></svg> Mover</button>
             <button class="tool-btn"        id="tool-select"        onclick="setMode('select')"        title="Selecionar tokens">⬛ Sel. Tokens</button>
             <button class="tool-btn"        id="tool-fog-box-paint" onclick="setMode('fog-box-paint')" title="Névoa em área">⬛ Box Névoa</button>
             <button class="tool-btn"        id="tool-fog-box-erase" onclick="setMode('fog-box-erase')" title="Revelar em área">⬜ Box Rev.</button>
@@ -402,8 +399,8 @@
 <!-- Cena (GM only) -->
 <div class="fp mestre-only" id="fp-cena" style="top:80px;left:70px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">🗺️ Cena</span>
-        <button class="fp-close" onclick="closePanel('fp-cena')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-map"/></svg> Cena</span>
+        <button class="fp-close" onclick="closePanel('fp-cena')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body section-stack">
         <button onclick="document.getElementById('f-map').click()"
@@ -438,14 +435,14 @@
 <!-- Fichas Salvas (GM only) -->
 <div class="fp mestre-only" id="fp-fichas" style="top:140px;left:70px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">📚 Fichas Salvas</span>
-        <button class="fp-close" onclick="closePanel('fp-fichas')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-book"/></svg> Fichas Salvas</span>
+        <button class="fp-close" onclick="closePanel('fp-fichas')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body section-stack">
         <button onclick="openPresetModal()"
             id="btn-open-preset-modal"
             class="action-btn action-btn-primary action-btn-block action-btn-small">
-            ➕ Nova Ficha
+            <svg class="icon icon-sm"><use href="#icon-plus"/></svg> Nova Ficha
         </button>
         <div id="preset-grid" class="preset-grid">
             <p class="preset-empty-state">Nenhuma ficha salva ainda.</p>
@@ -457,14 +454,14 @@
 <!-- Mapas Salvos (GM only) -->
 <div class="fp mestre-only" id="fp-mapas" style="top:200px;left:70px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">🗾 Mapas Salvos</span>
-        <button class="fp-close" onclick="closePanel('fp-mapas')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-layers"/></svg> Mapas Salvos</span>
+        <button class="fp-close" onclick="closePanel('fp-mapas')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body section-stack">
         <button onclick="openMapPresetModal()"
             id="btn-open-map-preset-modal"
             class="action-btn action-btn-primary action-btn-block action-btn-small">
-            ➕ Salvar Mapa Atual
+            <svg class="icon icon-sm"><use href="#icon-plus"/></svg> Salvar Mapa Atual
         </button>
         <div id="map-preset-grid" class="preset-grid">
             <p class="preset-empty-state">Nenhum mapa salvo ainda.</p>
@@ -476,18 +473,18 @@
 <!-- Névoa de Guerra (GM only) -->
 <div class="fp mestre-only" id="fp-nevoa" style="top:260px;left:70px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">🌫️ Névoa de Guerra</span>
-        <button class="fp-close" onclick="closePanel('fp-nevoa')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-cloud"/></svg> Névoa de Guerra</span>
+        <button class="fp-close" onclick="closePanel('fp-nevoa')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body section-stack">
         <div class="split-actions">
             <button onclick="clearFog()"
                 class="action-btn action-btn-info action-btn-grow action-btn-small">
-                👁️ Limpar Névoa
+                <svg class="icon icon-sm"><use href="#icon-eye"/></svg> Limpar Névoa
             </button>
             <button onclick="fillFog()"
                 class="action-btn action-btn-neutral action-btn-grow action-btn-small">
-                🌑 Cobrir Tudo
+                <svg class="icon icon-sm"><use href="#icon-cloud"/></svg> Cobrir Tudo
             </button>
         </div>
         <p class="helper-copy helper-copy-center">Use as ferramentas Névoa / Revelar para pintar célula a célula.</p>
@@ -498,8 +495,8 @@
 <!-- Grade & Mapa (GM only) -->
 <div class="fp mestre-only" id="fp-grade" style="top:80px;left:330px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">⚙️ Grade & Mapa</span>
-        <button class="fp-close" onclick="closePanel('fp-grade')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-settings"/></svg> Grade & Mapa</span>
+        <button class="fp-close" onclick="closePanel('fp-grade')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body section-stack section-stack-lg">
 
@@ -574,8 +571,8 @@
 <!-- Dados (todos os jogadores) -->
 <div class="fp" id="fp-dados" style="top:80px;left:70px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">🎲 Rolagem de Dados</span>
-        <button class="fp-close" onclick="closePanel('fp-dados')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-dice"/></svg> Rolagem de Dados</span>
+        <button class="fp-close" onclick="closePanel('fp-dados')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body section-stack">
 
@@ -588,7 +585,7 @@
                     aria-label="Notação de dados">
                 <button onclick="rollNotation()"
                     class="action-btn action-btn-primary action-btn-icon"
-                    aria-label="Rolar notação">🎲</button>
+                    aria-label="Rolar notação"><svg class="icon icon-sm"><use href="#icon-dice"/></svg></button>
             </div>
             <p class="helper-copy">kh = maior · kl = menor · d = descartar menor · dh = descartar maior</p>
         </div>
@@ -633,7 +630,7 @@
             <p class="panel-card-title">Histórico</p>
             <button onclick="clearDiceHistory()"
                 class="action-btn action-btn-neutral action-btn-tiny">
-                🗑 Limpar
+                <svg class="icon icon-sm"><use href="#icon-trash"/></svg> Limpar
             </button>
         </div>
         <div id="dice-history"
@@ -646,8 +643,8 @@
 <!-- Presença Online (todos) -->
 <div class="fp" id="fp-presenca" style="top:80px;left:70px;display:none;">
     <div class="fp-header" data-drag>
-        <span class="fp-title">👥 Online Agora</span>
-        <button class="fp-close" onclick="closePanel('fp-presenca')">✕</button>
+        <span class="fp-title"><svg class="icon icon-sm" style="margin-right:4px;"><use href="#icon-users"/></svg> Online Agora</span>
+        <button class="fp-close" onclick="closePanel('fp-presenca')"><svg class="icon icon-sm"><use href="#icon-x"/></svg></button>
     </div>
     <div class="fp-body">
         <div class="presence-panel">
